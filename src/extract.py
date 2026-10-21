@@ -62,7 +62,7 @@ def collect_all_jobs(search_task: list[dict], start_page: int, max_page: int, re
     all_jobs = []
     for task_number, search_task in enumerate(search_task, start=1):
         print(f'search task {task_number}/ {search_task}')
-        print(f'search query: {search_task["query"]}')
+        print(f'search query: {search_task['query']}')
         for page_number in range(start_page, max_page + 1):
             jobs = fetch_jobs_page(search_task, page_number)
             if not jobs:
@@ -84,7 +84,7 @@ def clean_invalid_unicode(value):
 def save_raw_jobs(jobs: list[dict]) -> Path:
     '''Save collected jobs to RAW_DATA_DIR.'''
     RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S_%f')
     output_path = RAW_DATA_DIR / f'jobs_{timestamp}.jsonl'
     df_jobs = pd.DataFrame(jobs)
     df_jobs.to_json(output_path, orient='records', lines=True, force_ascii=False)
@@ -103,7 +103,6 @@ if __name__ == '__main__':
         print(f'Raw jobs save to {output_path}')
     else:
         print('No jobs were collected.')
-
 
 
 

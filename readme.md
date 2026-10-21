@@ -162,8 +162,9 @@ expected structure and values; it does not measure classification accuracy.
 │   └── settings.py
 ├── data/
 │   ├── raw/                 # Archived JSONL collection batches
-│   ├── processed/           # Featured data and pipeline-generated outputs
-│   └── issues/              # Pipeline-generated cleaning issues
+│   ├── processed/           # Latest pipeline-generated outputs
+│   ├── issues/              # Latest pipeline-generated cleaning issues
+│   └── runs/                # Timestamped snapshots of each pipeline run
 ├── notebooks/
 │   ├── 01_raw_audit.ipynb
 │   ├── 02_cleaning_feature_audit.ipynb
@@ -186,9 +187,9 @@ expected structure and values; it does not measure classification accuracy.
 └── requirements.txt
 ```
 
-The pipeline writes cleaned, featured, analysis, review-queue, search-history, and issue JSONL files under
-`data/processed/` and `data/issues/`. Raw data and figures shown above are included in the repository; other generated
-outputs are created when the pipeline runs.
+The pipeline updates the latest cleaned, featured, analysis, review-queue, search-history, and issue JSONL files under
+`data/processed/` and `data/issues/`. It also saves a timestamped copy of each run under `data/runs/`, with processed
+files in `processed/` and cleaning issues in `issues/`. Raw collection batches are saved separately under `data/raw/`.
 
 ## How to Run
 
@@ -237,7 +238,8 @@ outputs = run_pipeline(jobs, save_raw_batch=False)
 print(outputs["analysis_jobs"])
 ```
 
-This offline run overwrites the processed output files without creating another raw batch. The four input paths pin the
+This offline run updates the latest processed output files and creates a timestamped archive without creating another
+raw batch. The four input paths pin the
 archived snapshot used for the dataset counts above, so later API batches are not silently added on reruns. The
 posting-age filter uses each record's original `collected_at_utc`, not the offline rerun date, so the same input
 snapshot retains the same age reference. If the archived raw files are unavailable in a checkout, collect data through

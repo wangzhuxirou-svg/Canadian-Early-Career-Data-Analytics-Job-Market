@@ -17,7 +17,7 @@ def _value_counts_text(values: pd.Series) -> str:
 
 
 def validate_features(df: pd.DataFrame) -> None:
-    """Validate the structure and values of engineered features."""
+    '''Validate the structure and values of engineered features.'''
     required_columns = {
         'job_id',
         'classified_role_family',
@@ -82,20 +82,20 @@ def validate_features(df: pd.DataFrame) -> None:
     if invalid_experience_type.any():
         errors.append(
             'Non-numeric experience requirements: '
-            f'{_value_counts_text(df.loc[invalid_experience_type, "stated_experience_years"])}.'
+            f'{_value_counts_text(df.loc[invalid_experience_type, 'stated_experience_years'])}.'
         )
     invalid_experience = experience < 0
     if invalid_experience.any():
         errors.append(
             'Negative experience requirements found: '
-            f'{_value_counts_text(df.loc[invalid_experience, "stated_experience_years"])}.'
+            f'{_value_counts_text(df.loc[invalid_experience, 'stated_experience_years'])}.'
         )
     if errors:
         raise ValueError('Feature validation failed:\n- ' + '\n- '.join(errors))
 
 
 def calculate_feature_coverage(df: pd.DataFrame,) -> pd.DataFrame:
-    """Calculate the non-empty coverage of engineered features."""
+    '''Calculate the non-empty coverage of engineered features.'''
     feature_columns = [
         'technical_skills',
         'soft_skills',

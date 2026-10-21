@@ -95,7 +95,7 @@ def clean_employment_types(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame
 
 
 def combine_issues(id_issues: pd.DataFrame, employment_type_issues: pd.DataFrame, location_issues: pd.DataFrame) -> pd.DataFrame:
-    """Combine cleaning issues into one table with a common type and reason."""
+    '''Combine cleaning issues into one table with a common type and reason.'''
     issue_groups = [
         (id_issues, 'missing_job_id'),
         (employment_type_issues, 'invalid_employment_type'),

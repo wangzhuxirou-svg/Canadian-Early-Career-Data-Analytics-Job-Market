@@ -226,7 +226,7 @@ SENIORITY_EXCLUDE_KEYWORDS = [
 ]
 
 START_PAGE = 1
-MAX_PAGES = 3
+MAX_PAGES = 4
 REQUEST_DELAY_SECONDS = 1
 
 PROVINCE_MAP = {
@@ -400,10 +400,10 @@ EDUCATION_CONTEXT_KEYWORDS = [
     'degree in',
     'degree',
     'bachelor',
-    "bachelor's",
+    'bachelor\'s',
     'undergraduate',
     'master',
-    "master's",
+    'master\'s',
     'phd',
     'college',
     'university',
