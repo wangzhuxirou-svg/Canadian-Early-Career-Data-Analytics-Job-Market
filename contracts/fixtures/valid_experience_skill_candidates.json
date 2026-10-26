@@ -1,0 +1,31 @@
+{
+  "input_text": "I used Microsoft Excel to analyze data. I have not used Python. I plan to learn SQL. My teammate used Power BI.",
+  "input_language": "en",
+  "language_notice": false,
+  "candidates": [
+    {
+      "skill_id": "excel",
+      "interpretation": "affirmed",
+      "evidence_text": "I used Microsoft Excel to analyze data.",
+      "rule_id": "experience.first_person_use"
+    },
+    {
+      "skill_id": "python",
+      "interpretation": "negated",
+      "evidence_text": "I have not used Python.",
+      "rule_id": "experience.negation"
+    },
+    {
+      "skill_id": "sql",
+      "interpretation": "planned",
+      "evidence_text": "I plan to learn SQL.",
+      "rule_id": "experience.future_intent"
+    },
+    {
+      "skill_id": "power_bi",
+      "interpretation": "ambiguous",
+      "evidence_text": "My teammate used Power BI.",
+      "rule_id": "experience.third_person"
+    }
+  ]
+}

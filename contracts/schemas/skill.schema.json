@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://utsc.example/contracts/v1/skill.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["skill_id", "label", "category", "aliases"],
+  "properties": {
+    "skill_id": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/skillId" },
+    "label": { "type": "string", "minLength": 1 },
+    "category": { "type": "string", "enum": ["technical", "soft"] },
+    "aliases": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+  }
+}

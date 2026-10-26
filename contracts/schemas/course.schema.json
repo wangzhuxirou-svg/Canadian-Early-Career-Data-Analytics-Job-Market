@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://utsc.example/contracts/v1/course.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["course_id", "title", "official_url", "calendar_year", "candidate_skill_ids", "evidence_text", "verified_at", "prerequisite_note"],
+  "properties": {
+    "course_id": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "official_url": { "type": "string", "format": "uri" },
+    "calendar_year": { "type": "string", "minLength": 4 },
+    "candidate_skill_ids": {
+      "type": "array",
+      "items": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/skillId" },
+      "uniqueItems": true
+    },
+    "evidence_text": { "type": "string", "minLength": 1 },
+    "verified_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/utcDateTime" },
+    "prerequisite_note": { "type": ["string", "null"] }
+  }
+}

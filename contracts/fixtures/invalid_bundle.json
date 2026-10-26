@@ -1,0 +1,46 @@
+{
+  "manifest": {
+    "schema_version": "1.0.0",
+    "dataset_version": "1.0.0",
+    "generated_at": "2026-10-26T16:00:00Z",
+    "collected_from": null,
+    "collected_to": null,
+    "posting_from": null,
+    "posting_to": null,
+    "query_config_version": "1.0.0",
+    "run_status": "complete",
+    "sample_count": 1
+  },
+  "market_jobs": [
+    {
+      "job_key": "jsearch:bad1",
+      "source": "jsearch",
+      "source_job_id": "bad1",
+      "job_title": "Ambiguous Analyst",
+      "employer_name": null,
+      "source_url": null,
+      "role_id": "financial_risk_analyst",
+      "role_subtype": null,
+      "role_classification_status": "classified",
+      "role_classification_label": null,
+      "classification_reasons": [],
+      "career_level": "entry_level",
+      "career_level_status": "classified",
+      "market_area": "toronto_gta",
+      "posted_at": "2026-10-20T12:30:00-04:00",
+      "posted_date": "2026-10-20",
+      "posted_precision": "datetime",
+      "source_timezone": "America/Toronto",
+      "first_seen_at": "2026-10-21T02:00:00Z",
+      "last_seen_at": "2026-10-26T15:00:00Z",
+      "technical_skill_ids": ["sql"],
+      "soft_skill_ids": [],
+      "description_status": "missing",
+      "description_analyzable": true
+    }
+  ],
+  "skills": [],
+  "courses": [],
+  "resources": [],
+  "opportunities": []
+}

@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://utsc.example/contracts/v1/common.schema.json",
+  "$defs": {
+    "roleId": {
+      "type": "string",
+      "enum": [
+        "data_analyst",
+        "business_analyst",
+        "bi_analyst",
+        "data_scientist",
+        "data_engineer",
+        "product_analyst",
+        "operations_analyst",
+        "financial_risk_analyst"
+      ]
+    },
+    "roleSubtype": {
+      "type": ["string", "null"],
+      "enum": ["financial_analysis", "risk_analysis", null]
+    },
+    "careerLevel": {
+      "type": "string",
+      "enum": ["internship", "new_grad", "entry_level", "unknown", "potential_senior"]
+    },
+    "marketArea": {
+      "type": "string",
+      "enum": ["toronto_gta", "montreal_metro", "other_canada", "unknown"]
+    },
+    "datePrecision": {
+      "type": "string",
+      "enum": ["datetime", "date", "unknown"]
+    },
+    "utcDateTime": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "nullableUtcDateTime": {
+      "anyOf": [
+        { "$ref": "#/$defs/utcDateTime" },
+        { "type": "null" }
+      ]
+    },
+    "nullableDate": {
+      "type": ["string", "null"],
+      "format": "date"
+    },
+    "skillId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "opportunityKind": {
+      "type": "string",
+      "enum": ["event", "ongoing_opportunity"]
+    },
+    "activityTypeId": {
+      "type": "string",
+      "enum": [
+        "workshop",
+        "competition",
+        "talk",
+        "networking",
+        "social",
+        "recruitment",
+        "volunteering",
+        "research",
+        "other"
+      ]
+    },
+    "topicId": {
+      "type": "string",
+      "enum": [
+        "data_ai",
+        "software",
+        "finance",
+        "business",
+        "arts_culture",
+        "community",
+        "other"
+      ]
+    },
+    "beginnerLevel": {
+      "type": "string",
+      "enum": ["beginner_friendly", "prerequisites_required", "unknown"]
+    },
+    "format": {
+      "type": "string",
+      "enum": ["online", "in_person", "hybrid", "unknown"]
+    },
+    "reviewStatus": {
+      "type": "string",
+      "enum": ["draft", "needs_review", "approved", "rejected", "archived"]
+    }
+  }
+}

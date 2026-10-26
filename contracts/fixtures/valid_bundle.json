@@ -1,0 +1,138 @@
+{
+  "manifest": {
+    "schema_version": "1.0.0",
+    "dataset_version": "1.0.0",
+    "generated_at": "2026-10-26T16:00:00Z",
+    "collected_from": "2026-10-19T08:00:00Z",
+    "collected_to": "2026-10-26T15:00:00Z",
+    "posting_from": "2026-09-21",
+    "posting_to": "2026-10-26",
+    "query_config_version": "1.0.0",
+    "run_status": "complete",
+    "sample_count": 1
+  },
+  "market_jobs": [
+    {
+      "job_key": "jsearch:demo1",
+      "source": "jsearch",
+      "source_job_id": "demo1",
+      "job_title": "Data Analyst Intern",
+      "employer_name": "Example Analytics",
+      "source_url": "https://jobs.example/job/demo1",
+      "role_id": "data_analyst",
+      "role_subtype": null,
+      "role_classification_status": "classified",
+      "role_classification_label": null,
+      "classification_reasons": [],
+      "career_level": "internship",
+      "career_level_status": "classified",
+      "market_area": "toronto_gta",
+      "posted_at": "2026-10-20T12:30:00Z",
+      "posted_date": "2026-10-20",
+      "posted_precision": "datetime",
+      "source_timezone": "America/Toronto",
+      "first_seen_at": "2026-10-21T02:00:00Z",
+      "last_seen_at": "2026-10-26T15:00:00Z",
+      "technical_skill_ids": ["python", "sql"],
+      "soft_skill_ids": ["teamwork"],
+      "description_status": "available",
+      "description_analyzable": true
+    }
+  ],
+  "skills": [
+    {
+      "skill_id": "python",
+      "label": "Python",
+      "category": "technical",
+      "aliases": ["Python 3"]
+    },
+    {
+      "skill_id": "sql",
+      "label": "SQL",
+      "category": "technical",
+      "aliases": ["structured query language"]
+    },
+    {
+      "skill_id": "teamwork",
+      "label": "Teamwork",
+      "category": "soft",
+      "aliases": ["collaboration"]
+    },
+    {
+      "skill_id": "excel",
+      "label": "Excel",
+      "category": "technical",
+      "aliases": ["Microsoft Excel"]
+    },
+    {
+      "skill_id": "power_bi",
+      "label": "Power BI",
+      "category": "technical",
+      "aliases": ["PowerBI"]
+    }
+  ],
+  "courses": [
+    {
+      "course_id": "demo_course",
+      "title": "Example Data Analysis Course",
+      "official_url": "https://courses.example/data-analysis",
+      "calendar_year": "2026-2027",
+      "candidate_skill_ids": ["python", "sql"],
+      "evidence_text": "Example fixture only; replace with verified official calendar evidence.",
+      "verified_at": "2026-10-26T16:00:00Z",
+      "prerequisite_note": null
+    }
+  ],
+  "resources": [
+    {
+      "resource_id": "demo_resource",
+      "title": "Example SQL Practice",
+      "resource_type": "tutorial",
+      "skill_ids": ["sql"],
+      "level": "beginner",
+      "eligibility_note": null,
+      "source_url": "https://learn.example/sql",
+      "verified_at": "2026-10-26T16:00:00Z"
+    }
+  ],
+  "opportunities": [
+    {
+      "opportunity_id": "demo_club_event",
+      "kind": "event",
+      "title": "Example Data Workshop",
+      "organizer_id": "example_club",
+      "source_url": "https://www.instagram.com/p/example_post/",
+      "source_post_id": "example_post",
+      "source_post_ids": ["example_post"],
+      "description": "Synthetic fixture event; not a real UTSC opportunity.",
+      "activity_type_ids": ["workshop"],
+      "topic_ids": ["data_ai"],
+      "skill_ids": ["python"],
+      "beginner_level": "unknown",
+      "eligibility_note": null,
+      "format": "in_person",
+      "location": "Example location",
+      "start_at": null,
+      "end_at": null,
+      "deadline_at": null,
+      "timezone": "America/Toronto",
+      "date_precision": "date",
+      "start_date": "2026-11-05",
+      "end_date": null,
+      "deadline_date": null,
+      "start_precision": "date",
+      "end_precision": "unknown",
+      "deadline_precision": "unknown",
+      "start_date_text": "November 5",
+      "end_date_text": null,
+      "deadline_date_text": null,
+      "verified_at": "2026-10-26T16:00:00Z",
+      "review_status": "approved",
+      "classification_reasons": ["Example synthetic evidence for workshop label."],
+      "registration_url": null,
+      "source_updated_at": null,
+      "content_revision": 1,
+      "change_pending": false
+    }
+  ]
+}
