@@ -1,12 +1,99 @@
 import json
+from pathlib import Path
 
 import pytest
 
-from src.market_export import export_market_history
+from src.market_export import (
+    calculate_market_statistics,
+    export_market_history,
+    to_market_job,
+)
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def read_jsonl(path):
     return [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines() if line]
+
+
+def test_market_statistics_match_shared_golden_cases():
+    fixture = json.loads(
+        (ROOT / 'contracts' / 'fixtures' / 'market_statistics_cases.json').read_text(encoding='utf-8')
+    )
+    for case in fixture['cases']:
+        result = calculate_market_statistics(
+            fixture['market_jobs'],
+            **case['filters'],
+            skill_ids=case['skill_ids'],
+        )
+        assert result == case['expected'], case['case_id']
+
+
+def test_market_export_maps_contract_dimensions_and_deduplicates_skill_ids():
+    description = 'A' * 600
+    exported = to_market_job({
+        'source': 'jsearch',
+        'job_id': 'job-4',
+        'job_title': 'Financial Analyst Intern',
+        'employer_name': 'Example',
+        'job_apply_link': 'https://jobs.example/job-4',
+        'classified_role_family': 'financial_risk_analyst',
+        'classified_role_subtype': 'financial_analysis',
+        'role_status': 'target',
+        'classified_career_level': 'internship',
+        'market_area': 'Toronto GTA',
+        'job_posted_at_datetime_utc': '2026-10-10T12:00:00Z',
+        'collected_at_utc': '2026-10-11T12:00:00Z',
+        'job_description': description,
+        'technical_skills': ['python', 'python', 'sql'],
+        'soft_skills': ['teamwork'],
+    })
+    assert exported['role_id'] == 'financial_risk_analyst'
+    assert exported['role_subtype'] == 'financial_analysis'
+    assert exported['career_level'] == 'internship'
+    assert exported['market_area'] == 'toronto_gta'
+    assert exported['posted_date'] == '2026-10-10'
+    assert exported['posted_precision'] == 'datetime'
+    assert exported['technical_skill_ids'] == ['python', 'sql']
+    assert exported['description_analyzable'] is True
+
+
+def test_market_export_preserves_review_routing_and_missing_description():
+    exported = to_market_job({
+        'job_id': 'job-review',
+        'job_title': 'Data Analyst and Data Scientist',
+        'classified_role_family': 'hybrid',
+        'role_status': 'manual_review',
+        'classified_career_level': 'unknown',
+        'market_area': 'unknown',
+        'collected_at_utc': '2026-10-11T12:00:00Z',
+        'job_description': None,
+    })
+    assert exported['role_id'] is None
+    assert exported['role_classification_status'] == 'needs_review'
+    assert exported['role_classification_label'] == 'hybrid'
+    assert exported['career_level_status'] == 'needs_review'
+    assert exported['description_status'] == 'missing'
+    assert exported['description_analyzable'] is False
+
+
+def test_market_statistics_includes_missing_description_in_total_but_not_denominator():
+    jobs = [{
+        'role_id': 'data_analyst',
+        'role_classification_status': 'classified',
+        'career_level': 'internship',
+        'career_level_status': 'classified',
+        'description_analyzable': False,
+        'technical_skill_ids': ['python'],
+        'soft_skill_ids': [],
+    }]
+    result = calculate_market_statistics(jobs, skill_ids=['python'])
+    assert result == {
+        'job_count': 1,
+        'analyzable_description_count': 0,
+        'skills': [{'skill_id': 'python', 'mention_count': 0, 'mention_rate': None}],
+    }
 
 
 def test_replaying_same_batch_is_idempotent_and_preserves_original_seen_times(tmp_path):

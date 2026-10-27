@@ -6,6 +6,19 @@ import tempfile
 from datetime import date, datetime, timezone
 from pathlib import Path
 
+from config.settings import CORE_CAREER_LEVELS, CORE_ROLE_FAMILIES, MIN_DESCRIPTION_LENGTH
+
+
+MARKET_AREA_IDS = {
+    'toronto gta': 'toronto_gta',
+    'montreal metro': 'montreal_metro',
+    'other canada': 'other_canada',
+    'unknown': 'unknown',
+    'toronto_gta': 'toronto_gta',
+    'montreal_metro': 'montreal_metro',
+    'other_canada': 'other_canada',
+}
+
 
 def _jsearch_source_job_id(record: dict) -> str | None:
     source_job_id = record.get('source_job_id') or record.get('job_id')
@@ -15,6 +28,204 @@ def _jsearch_source_job_id(record: dict) -> str | None:
 SOURCE_ID_ADAPTERS = {
     'jsearch': _jsearch_source_job_id,
 }
+
+
+def _skill_ids(record: dict, field: str) -> list[str]:
+    values = record.get(field) or []
+    if not isinstance(values, (list, tuple, set)):
+        raise ValueError(f'{field} must be a list of skill IDs.')
+    if any(not isinstance(value, str) or not value for value in values):
+        raise ValueError(f'{field} must contain non-empty string skill IDs.')
+    return sorted(set(values))
+
+
+def _posting_date(record: dict) -> tuple[str | None, str | None, str]:
+    value = record.get('posted_at') or record.get('job_posted_at_datetime_utc')
+    if value is None:
+        value = record.get('posted_date')
+    if value is None:
+        return None, None, 'unknown'
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return None, value.isoformat(), 'date'
+    text = str(value).strip()
+    try:
+        parsed = datetime.fromisoformat(text.replace('Z', '+00:00'))
+    except ValueError:
+        try:
+            parsed_date = date.fromisoformat(text)
+        except ValueError as error:
+            raise ValueError(f'Invalid job posting date: {value!r}.') from error
+        return None, parsed_date.isoformat(), 'date'
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    parsed = parsed.astimezone(timezone.utc)
+    return _timestamp_text(parsed), parsed.date().isoformat(), 'datetime'
+
+
+def to_market_job(record: dict) -> dict:
+    """Map a cleaned/featured JSearch record to the public market-job contract."""
+    source, source_job_id = _identity(record)
+    if not source_job_id:
+        raise ValueError(f'Market record from {source!r} is missing its source job ID.')
+
+    role_family = record.get('classified_role_family')
+    allowed_role_labels = CORE_ROLE_FAMILIES | {'hybrid', 'adjacent_hybrid', 'other', 'outside_scope'}
+    if role_family is not None and role_family not in allowed_role_labels:
+        raise ValueError(f'Unsupported classified role family: {role_family!r}.')
+    role_status = record.get('role_status')
+    role_id = role_family if role_family in CORE_ROLE_FAMILIES and role_status == 'target' else None
+    legacy_review_labels = {'hybrid', 'adjacent_hybrid', 'other', 'outside_scope'}
+    classification_label = role_family if role_family in legacy_review_labels else None
+    classification_reasons = []
+    if role_status == 'outside_scope' or role_family == 'outside_scope':
+        role_id = None
+        role_status = 'outside_scope'
+        classification_label = 'outside_scope'
+    elif role_id is None:
+        role_status = 'needs_review'
+        if record.get('is_senior'):
+            classification_reasons.append('seniority_conflict')
+    else:
+        role_status = 'classified'
+        classification_label = None
+
+    career_level = record.get('classified_career_level', 'unknown')
+    if career_level not in CORE_CAREER_LEVELS and career_level not in {'unknown', 'potential_senior'}:
+        raise ValueError(f'Unsupported classified career level: {career_level!r}.')
+    career_level_status = 'classified' if career_level in CORE_CAREER_LEVELS else 'needs_review'
+
+    area = str(record.get('market_area') or 'unknown').strip().lower()
+    market_area = MARKET_AREA_IDS.get(area)
+    if market_area is None:
+        raise ValueError(f'Unsupported market area: {record.get("market_area")!r}.')
+
+    posted_at, posted_date, posted_precision = _posting_date(record)
+    collected_at = record.get('collected_at_utc')
+    first_seen = record.get('first_seen_at') or collected_at
+    last_seen = record.get('last_seen_at') or collected_at or first_seen
+    if first_seen is None or last_seen is None:
+        raise ValueError(f'Market record {source}:{source_job_id} is missing collection timestamps.')
+    first_seen = _timestamp_text(_utc_datetime(first_seen))
+    last_seen = _timestamp_text(_utc_datetime(last_seen))
+
+    description = record.get('job_description')
+    has_description = isinstance(description, str) and bool(description.strip())
+    description_status = 'available' if has_description else 'missing'
+    analyzable = (
+        has_description
+        and len(description.strip()) >= MIN_DESCRIPTION_LENGTH
+        and record.get('description_analyzable', True) is not False
+    )
+    technical_skill_ids = _skill_ids(record, 'technical_skills')
+    soft_skill_ids = _skill_ids(record, 'soft_skills')
+    job_title = str(record.get('job_title') or '').strip()
+    if not job_title:
+        raise ValueError(f'Market record {source}:{source_job_id} is missing its job title.')
+    role_subtype = record.get('classified_role_subtype') if role_id == 'financial_risk_analyst' else None
+    if role_id == 'financial_risk_analyst' and role_subtype not in {'financial_analysis', 'risk_analysis'}:
+        raise ValueError(f'Market record {source}:{source_job_id} has an invalid financial/risk subtype.')
+
+    return {
+        'job_key': f'{source}:{source_job_id}',
+        'source': source,
+        'source_job_id': source_job_id,
+        'job_title': job_title,
+        'employer_name': record.get('employer_name'),
+        'source_url': record.get('source_url') or record.get('job_apply_link'),
+        'role_id': role_id,
+        'role_subtype': role_subtype,
+        'role_classification_status': role_status,
+        'role_classification_label': classification_label,
+        'classification_reasons': classification_reasons,
+        'career_level': career_level,
+        'career_level_status': career_level_status,
+        'market_area': market_area,
+        'posted_at': posted_at,
+        'posted_date': posted_date,
+        'posted_precision': posted_precision,
+        'source_timezone': record.get('source_timezone'),
+        'first_seen_at': first_seen,
+        'last_seen_at': last_seen,
+        'technical_skill_ids': technical_skill_ids,
+        'soft_skill_ids': soft_skill_ids,
+        'description_status': description_status,
+        'description_analyzable': analyzable,
+    }
+
+
+def calculate_market_statistics(
+    market_jobs: list[dict],
+    *,
+    role_ids: list[str] | None = None,
+    career_levels: list[str] | None = None,
+    market_areas: list[str] | None = None,
+    posted_from: str | None = None,
+    posted_to: str | None = None,
+    skill_ids: list[str] | None = None,
+) -> dict:
+    """Reference market counts; selectors OR within a field and AND across fields."""
+    start = date.fromisoformat(posted_from) if posted_from else None
+    end = date.fromisoformat(posted_to) if posted_to else None
+    if start and end and start > end:
+        raise ValueError('posted_from must be on or before posted_to.')
+
+    selected_roles = set(role_ids or [])
+    selected_levels = set(career_levels or [])
+    selected_areas = set(market_areas or [])
+    invalid_roles = selected_roles - CORE_ROLE_FAMILIES
+    invalid_levels = selected_levels - CORE_CAREER_LEVELS
+    invalid_areas = selected_areas - set(MARKET_AREA_IDS.values())
+    if invalid_roles or invalid_levels or invalid_areas:
+        raise ValueError(
+            'Unsupported market-statistics filter values: '
+            f'roles={sorted(invalid_roles)}, levels={sorted(invalid_levels)}, '
+            f'areas={sorted(invalid_areas)}.'
+        )
+    if skill_ids is not None and any(not isinstance(skill_id, str) or not skill_id for skill_id in skill_ids):
+        raise ValueError('skill_ids must contain non-empty strings.')
+    selected_skills = sorted(set(skill_ids or {
+        skill_id
+        for job in market_jobs
+        for skill_id in (job.get('technical_skill_ids') or []) + (job.get('soft_skill_ids') or [])
+    }))
+
+    sample = []
+    for job in market_jobs:
+        if job.get('role_classification_status') != 'classified' or job.get('role_id') not in CORE_ROLE_FAMILIES:
+            continue
+        if job.get('career_level_status') != 'classified' or job.get('career_level') not in CORE_CAREER_LEVELS:
+            continue
+        if selected_roles and job.get('role_id') not in selected_roles:
+            continue
+        if selected_levels and job.get('career_level') not in selected_levels:
+            continue
+        if selected_areas and job.get('market_area') not in selected_areas:
+            continue
+        if start or end:
+            posted_date = job.get('posted_date')
+            parsed_date = date.fromisoformat(posted_date) if posted_date else None
+            if parsed_date is None or (start and parsed_date < start) or (end and parsed_date > end):
+                continue
+        sample.append(job)
+
+    analyzable_sample = [job for job in sample if job.get('description_analyzable') is True]
+    skill_stats = []
+    for skill_id in selected_skills:
+        mention_count = sum(
+            skill_id in set(job.get('technical_skill_ids') or []) | set(job.get('soft_skill_ids') or [])
+            for job in analyzable_sample
+        )
+        denominator = len(analyzable_sample)
+        skill_stats.append({
+            'skill_id': skill_id,
+            'mention_count': mention_count,
+            'mention_rate': mention_count / denominator if denominator else None,
+        })
+    return {
+        'job_count': len(sample),
+        'analyzable_description_count': len(analyzable_sample),
+        'skills': skill_stats,
+    }
 
 
 def _normalize_json(value):
