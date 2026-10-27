@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://utsc.example/contracts/v1/opportunity.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "opportunity_id",
+    "kind",
+    "title",
+    "organizer_id",
+    "source_url",
+    "source_post_id",
+    "source_post_ids",
+    "description",
+    "activity_type_ids",
+    "topic_ids",
+    "skill_ids",
+    "beginner_level",
+    "eligibility_note",
+    "format",
+    "location",
+    "start_at",
+    "end_at",
+    "deadline_at",
+    "timezone",
+    "date_precision",
+    "start_date",
+    "end_date",
+    "deadline_date",
+    "start_precision",
+    "end_precision",
+    "deadline_precision",
+    "start_date_text",
+    "end_date_text",
+    "deadline_date_text",
+    "verified_at",
+    "review_status",
+    "classification_reasons",
+    "registration_url",
+    "source_updated_at",
+    "content_revision",
+    "change_pending"
+  ],
+  "properties": {
+    "opportunity_id": { "type": "string", "minLength": 1 },
+    "kind": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/opportunityKind" },
+    "title": { "type": "string", "minLength": 1 },
+    "organizer_id": { "type": "string", "minLength": 1 },
+    "source_url": { "type": "string", "format": "uri" },
+    "source_post_id": { "type": ["string", "null"] },
+    "source_post_ids": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "description": { "type": ["string", "null"] },
+    "activity_type_ids": {
+      "type": "array",
+      "items": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/activityTypeId" },
+      "uniqueItems": true
+    },
+    "topic_ids": {
+      "type": "array",
+      "items": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/topicId" },
+      "uniqueItems": true
+    },
+    "skill_ids": {
+      "type": "array",
+      "items": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/skillId" },
+      "uniqueItems": true
+    },
+    "beginner_level": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/beginnerLevel" },
+    "eligibility_note": { "type": ["string", "null"] },
+    "format": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/format" },
+    "location": { "type": ["string", "null"] },
+    "start_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/nullableUtcDateTime" },
+    "end_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/nullableUtcDateTime" },
+    "deadline_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/nullableUtcDateTime" },
+    "timezone": { "type": ["string", "null"] },
+    "date_precision": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/datePrecision" },
+    "start_date": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/nullableDate" },
+    "end_date": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/nullableDate" },
+    "deadline_date": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/nullableDate" },
+    "start_precision": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/datePrecision" },
+    "end_precision": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/datePrecision" },
+    "deadline_precision": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/datePrecision" },
+    "start_date_text": { "type": ["string", "null"] },
+    "end_date_text": { "type": ["string", "null"] },
+    "deadline_date_text": { "type": ["string", "null"] },
+    "verified_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/utcDateTime" },
+    "review_status": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/reviewStatus" },
+    "classification_reasons": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "registration_url": { "type": ["string", "null"], "format": "uri" },
+    "source_updated_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/nullableUtcDateTime" },
+    "content_revision": { "type": "integer", "minimum": 1 },
+    "change_pending": { "type": "boolean" }
+  },
+  "allOf": [
+    { "$ref": "#/$defs/datePrecisionConstraint" }
+  ],
+  "$defs": {
+    "datePrecisionConstraint": {
+      "allOf": [
+        {
+          "if": { "properties": { "start_precision": { "const": "date" } } },
+          "then": { "properties": { "start_at": { "type": "null" }, "start_date": { "type": "string", "format": "date" } } }
+        },
+        {
+          "if": { "properties": { "start_precision": { "const": "datetime" } } },
+          "then": { "properties": { "start_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/utcDateTime" }, "start_date": { "type": "string", "format": "date" } } }
+        },
+        {
+          "if": { "properties": { "start_precision": { "const": "unknown" } } },
+          "then": { "properties": { "start_at": { "type": "null" }, "start_date": { "type": "null" } } }
+        },
+        {
+          "if": { "properties": { "end_precision": { "const": "date" } } },
+          "then": { "properties": { "end_at": { "type": "null" }, "end_date": { "type": "string", "format": "date" } } }
+        },
+        {
+          "if": { "properties": { "end_precision": { "const": "datetime" } } },
+          "then": { "properties": { "end_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/utcDateTime" }, "end_date": { "type": "string", "format": "date" } } }
+        },
+        {
+          "if": { "properties": { "end_precision": { "const": "unknown" } } },
+          "then": { "properties": { "end_at": { "type": "null" }, "end_date": { "type": "null" } } }
+        },
+        {
+          "if": { "properties": { "deadline_precision": { "const": "date" } } },
+          "then": { "properties": { "deadline_at": { "type": "null" }, "deadline_date": { "type": "string", "format": "date" } } }
+        },
+        {
+          "if": { "properties": { "deadline_precision": { "const": "datetime" } } },
+          "then": { "properties": { "deadline_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/utcDateTime" }, "deadline_date": { "type": "string", "format": "date" } } }
+        },
+        {
+          "if": { "properties": { "deadline_precision": { "const": "unknown" } } },
+          "then": { "properties": { "deadline_at": { "type": "null" }, "deadline_date": { "type": "null" } } }
+        }
+      ]
+    }
+  }
+}

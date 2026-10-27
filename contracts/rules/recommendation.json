@@ -1,0 +1,26 @@
+{
+  "rule_set_version": "1.0.0",
+  "eligibility": {
+    "exclude_explicitly_ineligible_opportunities": true,
+    "unknown_eligibility_action": "show_warning",
+    "show_only_approved_opportunities": true,
+    "exclude_expired_opportunities": true,
+    "unknown_date_is_not_today": true
+  },
+  "matching": {
+    "required_input": "user_selected_target_skill_ids",
+    "match_field": "skill_ids",
+    "unconfirmed_user_skills_are_not_assumed_absent": true
+  },
+  "sort_priority": [
+    "target_skill_coverage_count_desc",
+    "beginner_fit_desc",
+    "verified_at_desc"
+  ],
+  "beginner_fit_order": ["beginner_friendly", "unknown", "prerequisites_required"],
+  "explanation": {
+    "show_match_and_filter_reasons": true,
+    "employment_probability": false,
+    "guaranteed_course_eligibility": false
+  }
+}

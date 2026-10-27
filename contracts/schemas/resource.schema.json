@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://utsc.example/contracts/v1/resource.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["resource_id", "title", "resource_type", "skill_ids", "level", "eligibility_note", "source_url", "verified_at"],
+  "properties": {
+    "resource_id": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "resource_type": {
+      "type": "string",
+      "enum": ["course", "tutorial", "project", "competition", "club", "event", "documentation", "other"]
+    },
+    "skill_ids": {
+      "type": "array",
+      "items": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/skillId" },
+      "uniqueItems": true
+    },
+    "level": { "type": "string", "enum": ["beginner", "intermediate", "advanced", "unknown"] },
+    "eligibility_note": { "type": ["string", "null"] },
+    "source_url": { "type": "string", "format": "uri" },
+    "verified_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/utcDateTime" }
+  }
+}

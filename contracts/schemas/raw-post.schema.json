@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://utsc.example/contracts/v1/raw-post.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source",
+    "source_post_id",
+    "organizer_id",
+    "source_url",
+    "posted_at",
+    "caption_raw",
+    "caption_status",
+    "media",
+    "media_completeness",
+    "first_seen_at",
+    "last_seen_at",
+    "last_fetched_at",
+    "content_hash",
+    "collection_status",
+    "errors"
+  ],
+  "properties": {
+    "source": { "type": "string", "const": "instagram" },
+    "source_post_id": { "type": "string", "minLength": 1 },
+    "organizer_id": { "type": "string", "minLength": 1 },
+    "source_url": { "type": "string", "format": "uri" },
+    "posted_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/nullableUtcDateTime" },
+    "caption_raw": { "type": ["string", "null"] },
+    "caption_status": { "type": "string", "enum": ["available", "empty", "unavailable"] },
+    "media": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["position", "type", "source_url", "local_path", "sha256", "width", "height", "download_status"],
+        "properties": {
+          "position": { "type": "integer", "minimum": 1 },
+          "type": { "type": "string", "enum": ["image", "video", "unknown"] },
+          "source_url": { "type": ["string", "null"], "format": "uri" },
+          "local_path": { "type": ["string", "null"] },
+          "sha256": { "type": ["string", "null"], "pattern": "^[a-fA-F0-9]{64}$" },
+          "width": { "type": ["integer", "null"], "minimum": 1 },
+          "height": { "type": ["integer", "null"], "minimum": 1 },
+          "download_status": { "type": "string", "enum": ["downloaded", "failed", "skipped", "metadata_only"] }
+        }
+      }
+    },
+    "media_completeness": { "type": "string", "enum": ["complete", "partial", "unknown"] },
+    "first_seen_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/utcDateTime" },
+    "last_seen_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/utcDateTime" },
+    "last_fetched_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/utcDateTime" },
+    "content_hash": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
+    "collection_status": { "type": "string", "enum": ["complete", "partial", "failed", "blocked", "requires_auth"] },
+    "errors": { "type": "array", "items": { "type": "string" } }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "caption_status": { "const": "empty" } } },
+      "then": { "properties": { "caption_raw": { "const": "" } } }
+    },
+    {
+      "if": { "properties": { "caption_status": { "const": "unavailable" } } },
+      "then": { "properties": { "caption_raw": { "type": "null" } } }
+    }
+  ]
+}

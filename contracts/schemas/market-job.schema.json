@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://utsc.example/contracts/v1/market-job.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "job_key",
+    "source",
+    "source_job_id",
+    "job_title",
+    "employer_name",
+    "source_url",
+    "role_id",
+    "role_subtype",
+    "role_classification_status",
+    "role_classification_label",
+    "classification_reasons",
+    "career_level",
+    "career_level_status",
+    "market_area",
+    "posted_at",
+    "posted_date",
+    "posted_precision",
+    "source_timezone",
+    "first_seen_at",
+    "last_seen_at",
+    "technical_skill_ids",
+    "soft_skill_ids",
+    "description_status",
+    "description_analyzable"
+  ],
+  "properties": {
+    "job_key": { "type": "string", "minLength": 1 },
+    "source": { "type": "string", "minLength": 1 },
+    "source_job_id": { "type": ["string", "null"] },
+    "job_title": { "type": "string", "minLength": 1 },
+    "employer_name": { "type": ["string", "null"] },
+    "source_url": { "type": ["string", "null"], "format": "uri" },
+    "role_id": {
+      "anyOf": [
+        { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/roleId" },
+        { "type": "null" }
+      ]
+    },
+    "role_subtype": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/roleSubtype" },
+    "role_classification_status": { "type": "string", "enum": ["classified", "needs_review", "outside_scope"] },
+    "role_classification_label": {
+      "type": ["string", "null"],
+      "enum": ["hybrid", "adjacent_hybrid", "other", "outside_scope", null]
+    },
+    "classification_reasons": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "career_level": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/careerLevel" },
+    "career_level_status": { "type": "string", "enum": ["classified", "needs_review"] },
+    "market_area": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/marketArea" },
+    "posted_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/nullableUtcDateTime" },
+    "posted_date": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/nullableDate" },
+    "posted_precision": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/datePrecision" },
+    "source_timezone": { "type": ["string", "null"] },
+    "first_seen_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/utcDateTime" },
+    "last_seen_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/utcDateTime" },
+    "technical_skill_ids": {
+      "type": "array",
+      "items": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/skillId" },
+      "uniqueItems": true
+    },
+    "soft_skill_ids": {
+      "type": "array",
+      "items": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/skillId" },
+      "uniqueItems": true
+    },
+    "description_status": { "type": "string", "enum": ["available", "missing", "unavailable"] },
+    "description_analyzable": { "type": "boolean" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "posted_precision": { "const": "datetime" } } },
+      "then": {
+        "properties": {
+          "posted_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/utcDateTime" },
+          "posted_date": { "type": "string", "format": "date" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "posted_precision": { "enum": ["date", "unknown"] } } },
+      "then": { "properties": { "posted_at": { "type": "null" } } }
+    },
+    {
+      "if": { "properties": { "posted_precision": { "const": "date" } } },
+      "then": { "properties": { "posted_date": { "type": "string", "format": "date" } } }
+    },
+    {
+      "if": { "properties": { "posted_precision": { "const": "unknown" } } },
+      "then": { "properties": { "posted_date": { "type": "null" } } }
+    },
+    {
+      "if": { "properties": { "role_classification_status": { "const": "classified" } } },
+      "then": {
+        "properties": {
+          "role_id": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/roleId" },
+          "role_classification_label": { "type": "null" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "role_classification_status": { "const": "needs_review" } } },
+      "then": { "properties": { "role_id": { "type": "null" } } }
+    },
+    {
+      "if": { "properties": { "role_classification_status": { "const": "outside_scope" } } },
+      "then": {
+        "properties": {
+          "role_id": { "type": "null" },
+          "role_classification_label": { "const": "outside_scope" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "role_id": { "const": "financial_risk_analyst" } } },
+      "then": {
+        "properties": {
+          "role_subtype": { "enum": ["financial_analysis", "risk_analysis"] }
+        }
+      },
+      "else": { "properties": { "role_subtype": { "type": "null" } } }
+    },
+    {
+      "if": { "properties": { "description_status": { "enum": ["missing", "unavailable"] } } },
+      "then": { "properties": { "description_analyzable": { "const": false } } }
+    },
+    {
+      "if": { "properties": { "career_level": { "const": "potential_senior" } } },
+      "then": { "properties": { "career_level_status": { "const": "needs_review" } } }
+    }
+  ]
+}

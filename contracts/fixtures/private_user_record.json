@@ -1,0 +1,43 @@
+{
+  "user_id": "synthetic-user-1",
+  "completed_course_ids": ["demo_course"],
+  "confirmed_skills": [
+    {
+      "skill_id": "python",
+      "source": "experience",
+      "source_id": "experience-1",
+      "confirmed_at": "2026-10-26T14:00:00Z"
+    }
+  ],
+  "experiences": [
+    {
+      "experience_id": "experience-1",
+      "text": "Synthetic example only: I used Python for a class project.",
+      "created_at": "2026-10-26T13:00:00Z",
+      "updated_at": "2026-10-26T13:00:00Z"
+    }
+  ],
+  "favorites": [
+    {
+      "target_type": "opportunity",
+      "target_id": "demo_club_event",
+      "created_at": "2026-10-26T14:05:00Z"
+    }
+  ],
+  "learning_paths": [
+    {
+      "path_id": "path-1",
+      "target_role_id": "data_analyst",
+      "created_at": "2026-10-26T14:10:00Z",
+      "items": [
+        {
+          "item_id": "path-item-1",
+          "resource_id": "demo_resource",
+          "skill_id": "sql",
+          "status": "not_started",
+          "updated_at": "2026-10-26T14:10:00Z"
+        }
+      ]
+    }
+  ]
+}

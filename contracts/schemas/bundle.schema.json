@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://utsc.example/contracts/v1/bundle.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["manifest", "market_jobs", "skills", "courses", "resources", "opportunities"],
+  "properties": {
+    "manifest": {
+      "allOf": [
+        { "$ref": "https://utsc.example/contracts/v1/manifest.schema.json" },
+        { "properties": { "run_status": { "enum": ["complete", "partial"] } } }
+      ]
+    },
+    "market_jobs": {
+      "type": "array",
+      "items": { "$ref": "https://utsc.example/contracts/v1/market-job.schema.json" }
+    },
+    "skills": {
+      "type": "array",
+      "items": { "$ref": "https://utsc.example/contracts/v1/skill.schema.json" }
+    },
+    "courses": {
+      "type": "array",
+      "items": { "$ref": "https://utsc.example/contracts/v1/course.schema.json" }
+    },
+    "resources": {
+      "type": "array",
+      "items": { "$ref": "https://utsc.example/contracts/v1/resource.schema.json" }
+    },
+    "opportunities": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          { "$ref": "https://utsc.example/contracts/v1/opportunity.schema.json" },
+          { "properties": { "review_status": { "const": "approved" } } }
+        ]
+      }
+    }
+  }
+}

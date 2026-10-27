@@ -1,0 +1,19 @@
+{
+  "manifest": {
+    "schema_version": "1.0.0",
+    "dataset_version": "1.0.1",
+    "generated_at": "2026-10-26T16:00:00Z",
+    "collected_from": null,
+    "collected_to": null,
+    "posting_from": null,
+    "posting_to": null,
+    "query_config_version": "1.0.0",
+    "run_status": "complete",
+    "sample_count": 0
+  },
+  "market_jobs": [],
+  "skills": [],
+  "courses": [],
+  "resources": [],
+  "opportunities": []
+}

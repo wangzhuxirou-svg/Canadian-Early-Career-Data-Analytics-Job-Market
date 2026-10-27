@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://utsc.example/contracts/v1/opportunity-draft.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["draft_id", "opportunity", "evidence", "missing_fields", "conflicts", "exclusion_reason", "created_at"],
+  "properties": {
+    "draft_id": { "type": "string", "minLength": 1 },
+    "opportunity": { "$ref": "https://utsc.example/contracts/v1/opportunity.schema.json" },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["field", "candidate_value", "evidence_text", "source_part", "media_position", "rule_id"],
+        "properties": {
+          "field": {
+            "type": "string",
+            "enum": [
+              "kind", "title", "description", "organizer_id", "start_at", "end_at", "deadline_at",
+              "start_date", "end_date", "deadline_date", "location", "format", "eligibility_note",
+              "registration_url", "activity_type_ids", "topic_ids", "skill_ids", "beginner_level"
+            ]
+          },
+          "candidate_value": {
+            "anyOf": [
+              { "type": "string" },
+              { "type": "number" },
+              { "type": "boolean" },
+              { "type": "null" },
+              { "type": "array", "items": { "type": "string" } }
+            ]
+          },
+          "evidence_text": { "type": "string", "minLength": 1 },
+          "source_part": { "type": "string", "enum": ["caption", "image_ocr"] },
+          "media_position": { "type": ["integer", "null"], "minimum": 1 },
+          "rule_id": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "missing_fields": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "conflicts": { "type": "array", "items": { "type": "string" } },
+    "exclusion_reason": { "type": ["string", "null"] },
+    "created_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/utcDateTime" }
+  },
+  "allOf": [
+    {
+      "properties": {
+        "opportunity": {
+          "properties": { "review_status": { "enum": ["draft", "needs_review"] } }
+        }
+      }
+    }
+  ]
+}

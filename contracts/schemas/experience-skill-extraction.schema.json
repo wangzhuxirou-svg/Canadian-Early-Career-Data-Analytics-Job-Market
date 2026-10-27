@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://utsc.example/contracts/v1/experience-skill-extraction.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["input_text", "input_language", "language_notice", "candidates"],
+  "properties": {
+    "input_text": { "type": "string" },
+    "input_language": { "type": "string", "enum": ["en", "other", "unknown"] },
+    "language_notice": { "type": "boolean" },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["skill_id", "interpretation", "evidence_text", "rule_id"],
+        "properties": {
+          "skill_id": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/skillId" },
+          "interpretation": { "type": "string", "enum": ["affirmed", "negated", "planned", "ambiguous"] },
+          "evidence_text": { "type": "string", "minLength": 1 },
+          "rule_id": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "input_language": { "const": "en" } } },
+      "then": { "properties": { "language_notice": { "const": false } } }
+    },
+    {
+      "if": { "properties": { "input_language": { "enum": ["other", "unknown"] } } },
+      "then": { "properties": { "language_notice": { "const": true } } }
+    }
+  ]
+}

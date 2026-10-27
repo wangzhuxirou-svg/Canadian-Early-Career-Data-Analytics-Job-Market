@@ -1,0 +1,28 @@
+{
+  "source": "instagram",
+  "source_post_id": "example_post",
+  "organizer_id": "example_club",
+  "source_url": "https://www.instagram.com/p/example_post/",
+  "posted_at": null,
+  "caption_raw": "Example synthetic post text.",
+  "caption_status": "available",
+  "media": [
+    {
+      "position": 1,
+      "type": "image",
+      "source_url": "https://cdn.example/poster.jpg",
+      "local_path": "private-media/example_post/1.jpg",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "width": 1080,
+      "height": 1350,
+      "download_status": "downloaded"
+    }
+  ],
+  "media_completeness": "complete",
+  "first_seen_at": "2026-10-26T12:00:00Z",
+  "last_seen_at": "2026-10-26T12:00:00Z",
+  "last_fetched_at": "2026-10-26T12:00:00Z",
+  "content_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "collection_status": "complete",
+  "errors": []
+}

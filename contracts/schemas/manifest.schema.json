@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://utsc.example/contracts/v1/manifest.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset_version",
+    "generated_at",
+    "collected_from",
+    "collected_to",
+    "posting_from",
+    "posting_to",
+    "query_config_version",
+    "run_status",
+    "sample_count"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "dataset_version": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "generated_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/utcDateTime" },
+    "collected_from": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/nullableUtcDateTime" },
+    "collected_to": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/nullableUtcDateTime" },
+    "posting_from": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/nullableDate" },
+    "posting_to": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/nullableDate" },
+    "query_config_version": { "type": "string", "minLength": 1 },
+    "run_status": { "type": "string", "enum": ["complete", "partial", "failed"] },
+    "sample_count": { "type": "integer", "minimum": 0 }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "rule_set_version": "1.0.0",
+  "contract_schema": "https://utsc.example/contracts/v1/experience-skill-extraction.schema.json",
+  "language_scope": ["en"],
+  "language_notice_for": ["other", "unknown"],
+  "matching": {
+    "use_skill_ids": true,
+    "match_aliases_as_words": true,
+    "emit_original_evidence_text": true,
+    "deduplicate_aliases_for_same_mention": true,
+    "do_not_infer_proficiency": true,
+    "user_confirmation_required": true
+  },
+  "interpretations": {
+    "affirmed": "A first-person statement indicating the user has used or practiced the skill.",
+    "negated": "A first-person statement explicitly denying experience with the skill.",
+    "planned": "A statement of intent or future learning, not current experience.",
+    "ambiguous": "The text mentions the skill but does not establish that the user has it."
+  },
+  "separation": {
+    "job_description_extraction_uses_this_rule_set": false,
+    "job_description_rules_are_versioned_separately": true
+  }
+}
