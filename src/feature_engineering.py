@@ -4,7 +4,7 @@ from src.validate import validate_features
 from config.settings import SENIORITY_EXCLUDE_KEYWORDS, ROLE_KEYWORDS, ADJACENT_ROLE_KEYWORDS, CAREER_LEVEL_KEYWORDS, \
     CAREER_LEVEL_DESCRIPTION_KEYWORDS, OUTSIDE_ROLE_KEYWORDS, TECHNICAL_SKILLS_KEYWORDS, SOFT_SKILL_KEYWORDS, \
     LANGUAGE_KEYWORDS, EDUCATION_CONTEXT_KEYWORDS, MAJOR_KEYWORDS, EXPERIENCE_YEARS_PATTERN, NO_EXPERIENCE_PATTERN, \
-    NUMBER_WORDS
+    NUMBER_WORDS, ROLE_KEYWORD_EXCLUSIONS, FINANCIAL_RISK_SUBTYPE_KEYWORDS
 
 
 def normalized_matching_text(value: str) -> str:
@@ -33,39 +33,62 @@ def flag_senior_jobs(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def classify_role_title(job_title: str) -> str:
-    '''Classify role title into a job family.'''
+def classify_role_title_details(job_title: str) -> tuple[str, str | None]:
+    '''Classify a title and retain the financial/risk subtype when present.'''
     normalized_title = normalized_matching_text(job_title)
     target_matches = []
     for role_family, keywords in ROLE_KEYWORDS.items():
+        if any(
+            contain_keyword(normalized_title, keyword)
+            for keyword in ROLE_KEYWORD_EXCLUSIONS.get(role_family, [])
+        ):
+            continue
         if any(contain_keyword(normalized_title, keyword)
                for keyword in keywords
                ):
             target_matches.append(role_family)
     if len(target_matches) == 1:
-        return target_matches[0]
+        role_family = target_matches[0]
+        if role_family == 'financial_risk_analyst':
+            for subtype, keywords in FINANCIAL_RISK_SUBTYPE_KEYWORDS.items():
+                if any(contain_keyword(normalized_title, keyword) for keyword in keywords):
+                    return role_family, subtype
+        return role_family, None
     if len(target_matches) > 1:
-        return 'hybrid'
+        return 'hybrid', None
 
     if any(
         contain_keyword(normalized_title, keyword)
         for keywords in ADJACENT_ROLE_KEYWORDS.values()
         for keyword in keywords
     ):
-        return 'adjacent_hybrid'
+        return 'adjacent_hybrid', None
     if any(contain_keyword(normalized_title, keyword)
             for keyword in OUTSIDE_ROLE_KEYWORDS):
-        return 'outside_scope'
-    return 'other'
+        return 'outside_scope', None
+    return 'other', None
+
+
+def classify_role_title(job_title: str) -> str:
+    '''Classify role title into a job family.'''
+    return classify_role_title_details(job_title)[0]
 
 
 def classify_roles(df: pd.DataFrame) -> pd.DataFrame:
     '''Classify the roles of jobs in df.'''
-    df['classified_role_family'] = df['job_title'].apply(classify_role_title)
+    role_results = df['job_title'].apply(classify_role_title_details)
+    df['classified_role_family'] = role_results.map(lambda result: result[0])
+    df['classified_role_subtype'] = role_results.map(lambda result: result[1])
     target_role_family = set(ROLE_KEYWORDS)
     df['role_status'] = 'manual_review'
     df.loc[df['classified_role_family'].isin(target_role_family), 'role_status'] = 'target'
     df.loc[df['classified_role_family'].eq('outside_scope'),'role_status'] = 'outside_scope'
+    senior_pattern = r'\b(?:' + '|'.join(
+        re.escape(keyword) for keyword in SENIORITY_EXCLUDE_KEYWORDS
+    ) + r')\b'
+    senior_mask = df['job_title'].str.contains(senior_pattern, case=False, na=False)
+    review_senior = senior_mask & df['classified_role_family'].ne('outside_scope')
+    df.loc[review_senior, 'role_status'] = 'manual_review'
     return df
 
 
@@ -95,7 +118,7 @@ def classify_career_levels(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         for column in ['classified_career_level',
                        'career_keyword',
-                       'source',
+                       'career_level_evidence_source',
                        'career_level_status',
                        ]:
             df[column] = pd.Series(index=df.index, dtype='string')
@@ -104,14 +127,14 @@ def classify_career_levels(df: pd.DataFrame) -> pd.DataFrame:
                        result_type='expand')
     results.columns = ['classified_career_level',
                        'career_keyword',
-                       'source',
+                       'career_level_evidence_source',
                        'career_level_status',
                        ]
     df[results.columns] = results
     senior_mask = df['is_senior']
     df.loc[senior_mask, 'classified_career_level'] = 'potential_senior'
     df.loc[senior_mask, 'career_keyword'] = 'seniority keyword'
-    df.loc[senior_mask, 'source'] = 'job_title'
+    df.loc[senior_mask, 'career_level_evidence_source'] = 'job_title'
     df.loc[senior_mask, 'career_level_status'] = 'manual_review'
     return df
 

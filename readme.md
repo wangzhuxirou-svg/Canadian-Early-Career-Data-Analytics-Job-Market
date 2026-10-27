@@ -6,8 +6,10 @@ This project builds a reproducible data pipeline for analyzing early-career data
 Postings are collected through the OpenWebNinja JSearch API, audited, cleaned, deduplicated, classified, and analyzed
 using Python and pandas.
 
-The analysis focuses on internship and co-op, new graduate, and entry-level postings across data analyst, business
-analyst, BI analyst, data engineer, and data scientist roles. It explores role composition, technical skill mentions and
+The analysis focuses on internship and co-op, new graduate, and entry-level postings across data analyst,
+business analyst, BI analyst, data scientist, data engineer, product analyst, operations analyst, and
+financial/risk analyst roles. Financial and risk postings share the `financial_risk_analyst` family and retain
+`financial_analysis` or `risk_analysis` as a subtype. It explores role composition, technical skill mentions and
 combinations, fields of study listed in postings, experience statements, and geographic differences.
 
 **Status:** Data collection, processing, and initial exploratory analysis are complete. Manual classification validation
@@ -25,7 +27,9 @@ is pending.
 
 ## Key Findings
 
-In the current sample of 180 analyzed job postings:
+The findings below describe the archived 180-posting pre-D1 sample. The fixed replay after D1 now produces 169
+analysis candidates under the expanded and revised classifier; the historic figures and charts have not yet been
+regenerated for the revised classification.
 
 - **Core technical skills:** Python was detected in 84 postings (46.7%) and
   SQL in 70 postings (38.9%). They formed the most common two-skill
@@ -80,20 +84,23 @@ machine-learning libraries depending on their target role family.
 | Source                           | OpenWebNinja JSearch API                                       |
 | Geographic scope                 | Canada                                                         |
 | Primary markets                  | Toronto GTA, Montreal Metro, and Other Canada                  |
-| Archived collection period       | September 11–20, 2026(UTC; collectioni timestamps)             |
+| Archived collection period       | September 11–20, 2026 (UTC; collection timestamps)             |
 | Archived raw data                | 643 rows across 4 JSONL batches; 500 unique job IDs            |
 | Cleaned and deduplicated records | 492                                                            |
-| Analyzed sample                  | 180 postings                                                   |
+| Analyzed sample (pre-D1 baseline) | 180 postings                                                  |
+| Fixed replay after D1            | 169 analysis candidates                                         |
 | Posting date range               | August 12–September 16, 2026 (UTC; job publication timestamps) |
 
 Collection timestamps (`collected_at_utc`) and job publication timestamps (`job_posted_at_datetime_utc`) refer to
 different events. Search queries are configured for Canada and combine role-related terms with internship, new graduate,
 or entry-level terms. Duplicate records are consolidated by job ID.
 
-The analysis sample includes postings assigned to one of the five core role families and one of the three core career
-levels. It excludes records outside Canada, invalid locations, invalid or future posting dates, postings older than 35
-days at collection, and titles flagged with seniority keywords. Ambiguous role and career-level classifications are
-retained in featured data and routed for review, not included in the formal analysis sample.
+The classifier now covers eight core role families and three core career levels. The fixed D0 replay preserves the
+same four tracked raw batches; its post-D1 analysis count changes because of the revised role rules. The analysis sample
+excludes records outside Canada, invalid locations, invalid or future posting dates, postings older than 35 days at
+collection, and titles flagged with seniority keywords. Cross-class and senior titles are routed for review, not
+included in the formal analysis sample. See [`docs/data_role_review.md`](docs/data_role_review.md) for the real-record
+spot-check and underrepresented-class caveats.
 
 Market-area city mappings are maintained in [`config/settings.py`](config/settings.py): Toronto GTA includes Toronto,
 Mississauga, and Markham; Montreal Metro includes Montreal, Montreal-Ouest, Greater Montreal, and Mont-Royal.
@@ -104,8 +111,10 @@ Mississauga, and Markham; Montreal Metro includes Montreal, Montreal-Ouest, Grea
 The workflow combines an automated processing pipeline with notebook-based audits and exploratory analysis.
 `src/pipeline.py` orchestrates data collection and processing; the notebooks are run separately.
 
-1. **Extraction:** Sends role and career-level search queries to the JSearch API, adds query and collection metadata,
-   and saves timestamped JSONL batches.
+1. **Extraction:** Sends the configured role and career-level queries to JSearch, adds source/query/collection
+   metadata, and saves timestamped JSONL batches. The default is one page for each of 24 role-level combinations;
+   monthly request accounting, retries, and checkpoints are documented in
+   [`docs/data_collection.md`](docs/data_collection.md).
 2. **Cleaning:** Standardizes text and timestamps, records missing-ID, invalid-employment-type, and invalid-location
    issues, deduplicates by job ID, normalizes locations, and flags posting age.
 3. **Feature engineering:** Classifies role and career level, extracts qualification features, and builds a review
@@ -117,13 +126,15 @@ The workflow combines an automated processing pipeline with notebook-based audit
    regional role composition.
 
 The formal sample is generated from featured records using the role, career-level, country, location, seniority, and
-posting-date filters described above.
+posting-date filters described above. Completed runs update a cumulative JSearch history and create immutable snapshots
+under `data/history/`; changes in query coverage alone are not evidence of market growth.
 
 ## Feature Engineering
 
 | Feature                   | Description                                                                                              |
 |---------------------------|----------------------------------------------------------------------------------------------------------|
 | `classified_role_family`  | Role family classified from the job title                                                                |
+| `classified_role_subtype` | `financial_analysis` or `risk_analysis` for `financial_risk_analyst`; null for other families              |
 | `classified_career_level` | Internship, new graduate, entry-level, unknown, or potential senior; title is checked before description |
 | `technical_skills`        | Technical tools and programming skills detected in the posting text                                      |
 | `soft_skills`             | Workplace skills detected in the posting text                                                            |

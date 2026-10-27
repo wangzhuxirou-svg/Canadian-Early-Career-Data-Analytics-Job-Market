@@ -19,6 +19,13 @@ real market or club data.
   additionally check cross-file references, uniqueness, time ordering,
   `sample_count`, and the contents of skill arrays. JSON Schema alone cannot
   validate those relationships.
+- `market-statistics.schema.json` describes the shared result shape for
+  reference counts; its inputs are `market-job` records and its algorithm is
+  specified by `rules/market-statistics.json`. The executable Python reference
+  is `src.market_export.calculate_market_statistics`.
+- `src.market_export.export_market_bundle` creates and validates the package
+  envelope plus standalone JSON files. The reproducible offline workflow and
+  historical-data limitations are documented in `docs/data_market_package.md`.
 - Datetimes in the public contract are UTC ISO 8601 strings ending in `Z`.
   Date-only values use `YYYY-MM-DD`; never manufacture a time for them. Preserve
   the source timezone and original date text when available.
@@ -42,11 +49,13 @@ are review states, not counted levels.
 ## Public package contents
 
 `bundle.schema.json` is a validation envelope for the files emitted separately
-by the publisher: manifest, market jobs, skills, courses, resources, and
-approved opportunities. Do not put user records, credentials, API keys,
-Instagram session state, raw descriptions, downloaded media, or private review
-data in that package. Market descriptions are represented only by
-`description_status` and `description_analyzable`.
+by the publisher: manifest, market jobs, skills, organizers, courses, resources,
+and approved opportunities. Opportunities reference organizers by
+`organizer_id`; include the corresponding organizer records in the same bundle
+so clients can resolve display names and profile links. Do not put user
+records, credentials, API keys, Instagram session state, raw descriptions,
+downloaded media, or private review data in that package. Market descriptions
+are represented only by `description_status` and `description_analyzable`.
 
 The `opportunity` schema retains the original singular `source_post_id` and
 `date_precision` fields for compatibility, while adding `source_post_ids`,
@@ -55,6 +64,10 @@ and pending-change state. For a `date` precision, populate the corresponding
 `*_date` and leave `*_at` null. For `datetime`, provide both the local calendar
 date and the exact UTC instant. For `unknown`, both are null. `timezone` is the
 source/event IANA timezone when known.
+
+Opportunity responsibilities and time commitment are nullable strings.
+Compensation uses `paid`, `unpaid`, or `not_stated`; CCR uses `yes`, `no`, or
+`not_stated`. Use `not_stated` only when the source does not specify a value.
 
 The legacy `date_precision` is retained for compatibility; filtering and
 calendar export must use `start_precision`, `end_precision`, and
@@ -79,6 +92,32 @@ mentioning a skill divided by postings with analyzable descriptions in the
 same filtered sample; report total and analyzable counts, and return null for
 a zero denominator.
 
+The market-statistics reference first includes only classified primary roles
+and classified core career levels. Role, career-level, and market-area filters
+use OR within each selected dimension and AND across dimensions. Posting-date
+bounds are inclusive; records with unknown posting dates are excluded when a
+date bound is active. An empty selector means no filter. `job_count` includes
+eligible rows even when their descriptions are missing; those rows do not
+contribute to `analyzable_description_count` or skill mention counts. Skill
+IDs select which rates to report, not which jobs enter the sample. Duplicate
+skill IDs within one posting, including across technical and soft arrays, count
+as one mention. If no skill IDs are supplied, report every skill ID in the
+filtered sample; an explicit list reports only those skills. The Python
+`to_market_job` adapter maps cleaned/featured JSearch rows to contract field
+names and omits raw descriptions. `market_statistics_cases.json` provides fixed
+expected outputs for an empty sample, missing descriptions, duplicate skill
+mentions, and combined filters.
+
+`rules/course-skill-mapping.json` defines conservative course-to-skill
+candidates. They require official-source evidence, preserve the supporting
+text, and remain subject to review; course titles alone do not establish
+skills, completion, or proficiency. Its synthetic examples are in
+`course-skill-mapping-cases.json`. Personal experience extraction remains a
+separate contract and rule set: the fixed
+`valid_experience_skill_candidates.json` example distinguishes affirmed,
+negated, planned, and third-person/ambiguous mentions. Course and experience
+candidates never automatically confirm a user's skill.
+
 ## Role and opportunity enums
 
 Opportunity `activity_type_ids`: `workshop`, `competition`, `talk`,
@@ -97,6 +136,6 @@ until review and must not be used to export calendar reminders.
 - `schemas/`: JSON Schemas for package data and the Instagram ingestion/review
   handoff.
 - `fixtures/`: synthetic valid, empty, invalid, and ingestion examples.
-- `rules/`: reserved for the agreed skill extraction and recommendation rules;
-  job-description extraction and personal-experience extraction are separate
-  rule sets.
+- `rules/`: versioned market-statistics, course mapping, personal-experience,
+  and recommendation rules. Job-description extraction and personal
+  experience extraction remain separate rule sets.
