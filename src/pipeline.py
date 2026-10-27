@@ -1,4 +1,5 @@
 import logging
+import json
 from pathlib import Path
 from datetime import datetime, timezone
 import pandas as pd
@@ -14,6 +15,7 @@ from config.settings import (
 from src.clean import clean_jobs, combine_issues
 from src.extract import collect_all_jobs, save_raw_jobs
 from src.feature_engineering import engineer_features
+from src.market_export import export_market_history
 from src.review import build_review_queue
 from src.validate import calculate_feature_coverage
 
@@ -71,7 +73,11 @@ def _create_run_archive_dir() -> Path:
             suffix += 1
 
 
-def run_pipeline(jobs: list[dict] | None = None, save_raw_batch: bool = True,) -> dict[str, Path]:
+def run_pipeline(
+    jobs: list[dict] | None = None,
+    save_raw_batch: bool = True,
+    collection_run_id: str | None = None,
+) -> dict[str, Path]:
     '''Run all pipeline steps and return paths to the generated JSONL files.
     When jobs is omitted, postings are fetched from the configured job API.
     Passing jobs directly is useful for reruns and offline processing.
@@ -88,6 +94,7 @@ def run_pipeline(jobs: list[dict] | None = None, save_raw_batch: bool = True,) -
             START_PAGE,
             MAX_PAGES,
             REQUEST_DELAY_SECONDS,
+            run_id=collection_run_id,
         )
     else:
         LOGGER.info('Running pipeline on %s supplied raw rows', len(jobs))
@@ -162,6 +169,18 @@ def run_pipeline(jobs: list[dict] | None = None, save_raw_batch: bool = True,) -
     outputs['run_archive'] = run_archive_dir
     if raw_path is not None:
         outputs['raw_jobs'] = raw_path
+    valid_job_ids = set(df_clean['job_id'].astype(str))
+    market_rows = json.loads(df_clean.to_json(orient='records', date_format='iso'))
+    search_rows = json.loads(search_history.to_json(orient='records', date_format='iso'))
+    search_rows = [row for row in search_rows if str(row.get('job_id')) in valid_job_ids]
+    market_path, market_snapshot = export_market_history(
+        market_rows,
+        snapshot_id=run_archive_dir.name,
+        history_dir=PROJECT_ROOT / 'data' / 'history',
+        search_history=search_rows,
+    )
+    outputs['market_history'] = market_path
+    outputs['market_snapshot'] = market_snapshot
     dataframes = {
         'cleaned_jobs': df_clean,
         'featured_jobs': df_features,
