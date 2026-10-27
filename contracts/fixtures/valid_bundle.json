@@ -1,6 +1,6 @@
 {
   "manifest": {
-    "schema_version": "1.0.0",
+    "schema_version": "1.1.0",
     "dataset_version": "1.0.0",
     "generated_at": "2026-10-26T16:00:00Z",
     "collected_from": "2026-10-19T08:00:00Z",
@@ -103,7 +103,8 @@
       "level": "beginner",
       "eligibility_note": null,
       "source_url": "https://learn.example/sql",
-      "verified_at": "2026-10-26T16:00:00Z"
+      "verified_at": "2026-10-26T16:00:00Z",
+      "mapping_evidence": "Synthetic fixture only; official evidence must be verified before use."
     }
   ],
   "opportunities": [

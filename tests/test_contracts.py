@@ -69,6 +69,24 @@ def test_bundle_fixtures_match_contract(fixture_name, schemas_and_registry):
     assert bundle["manifest"]["sample_count"] == len(bundle["market_jobs"])
 
 
+def test_resource_mapping_evidence_is_optional_for_existing_records(schemas_and_registry):
+    schemas, registry = schemas_and_registry
+    bundle = load_json(FIXTURES_DIR / "valid_bundle.json")
+    resource = copy.deepcopy(bundle["resources"][0])
+    assert resource["mapping_evidence"]
+    validate(resource, schemas["resource"], registry)
+
+    resource.pop("mapping_evidence")
+    validate(resource, schemas["resource"], registry)
+
+    resource["mapping_evidence"] = None
+    validate(resource, schemas["resource"], registry)
+
+    resource["mapping_evidence"] = ""
+    with pytest.raises(ValidationError):
+        validate(resource, schemas["resource"], registry)
+
+
 def test_market_statistics_golden_fixture_matches_contracts(schemas_and_registry):
     schemas, registry = schemas_and_registry
     fixture = load_json(FIXTURES_DIR / "market_statistics_cases.json")

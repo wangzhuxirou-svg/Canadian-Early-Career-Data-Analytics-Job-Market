@@ -351,7 +351,7 @@ def export_market_bundle(
     generated_at = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
     bundle = {
         'manifest': {
-            'schema_version': '1.0.0',
+            'schema_version': '1.1.0',
             'dataset_version': dataset_version,
             'generated_at': generated_at,
             'collected_from': collected_from,
