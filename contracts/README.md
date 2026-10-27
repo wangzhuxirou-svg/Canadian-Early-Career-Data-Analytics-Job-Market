@@ -23,6 +23,9 @@ real market or club data.
   reference counts; its inputs are `market-job` records and its algorithm is
   specified by `rules/market-statistics.json`. The executable Python reference
   is `src.market_export.calculate_market_statistics`.
+- `src.market_export.export_market_bundle` creates and validates the package
+  envelope plus standalone JSON files. The reproducible offline workflow and
+  historical-data limitations are documented in `docs/data_market_package.md`.
 - Datetimes in the public contract are UTC ISO 8601 strings ending in `Z`.
   Date-only values use `YYYY-MM-DD`; never manufacture a time for them. Preserve
   the source timezone and original date text when available.

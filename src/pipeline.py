@@ -1,7 +1,9 @@
 import logging
 import json
+import shutil
 from pathlib import Path
 from datetime import datetime, timezone
+from tempfile import TemporaryDirectory
 import pandas as pd
 from config.settings import (
     CORE_CAREER_LEVELS,
@@ -15,7 +17,11 @@ from config.settings import (
 from src.clean import clean_jobs, combine_issues
 from src.extract import collect_all_jobs, save_raw_jobs
 from src.feature_engineering import engineer_features
-from src.market_export import export_market_history
+from src.market_export import (
+    export_market_bundle,
+    export_market_history,
+    publish_staged_market_outputs,
+)
 from src.review import build_review_queue
 from src.validate import calculate_feature_coverage
 
@@ -71,6 +77,78 @@ def _create_run_archive_dir() -> Path:
         except FileExistsError:
             run_dir = runs_dir / f"{timestamp}_{suffix}"
             suffix += 1
+
+
+def _read_archived_raw_jobs(raw_dir: Path) -> list[dict]:
+    records = []
+    for path in sorted(raw_dir.glob('jobs_*.jsonl')):
+        with path.open(encoding='utf-8') as file:
+            for line_number, line in enumerate(file, start=1):
+                if not line.strip():
+                    continue
+                try:
+                    record = json.loads(line)
+                except json.JSONDecodeError as error:
+                    raise ValueError(f'Invalid archived raw JSON at {path}:{line_number}.') from error
+                if not isinstance(record, dict):
+                    raise ValueError(f'Expected an object at {path}:{line_number}.')
+                records.append(record)
+    return records
+
+
+def _rebuild_legacy_market_rows(
+    history_path: Path,
+    incoming_jobs: list[dict],
+) -> tuple[list[dict], list[dict]] | None:
+    if not history_path.exists():
+        return None
+    existing_rows = [
+        json.loads(line)
+        for line in history_path.read_text(encoding='utf-8').splitlines()
+        if line.strip()
+    ]
+    required_features = {
+        'classified_role_family',
+        'classified_role_subtype',
+        'classified_career_level',
+        'technical_skills',
+        'soft_skills',
+    }
+    if not existing_rows or all(required_features <= row.keys() for row in existing_rows):
+        return None
+
+    raw_archives = _read_archived_raw_jobs(PROJECT_ROOT / 'data' / 'raw')
+    if not raw_archives:
+        raise RuntimeError(
+            'Legacy cumulative market history lacks classification/features, and no archived raw batches '
+            'are available to rebuild it. Restore data/raw/jobs_*.jsonl before retrying.'
+        )
+
+    raw_frame = pd.DataFrame(raw_archives + incoming_jobs)
+    cleaned, _, search_history, _, _ = clean_jobs(raw_frame)
+    features = engineer_features(cleaned)
+    rebuilt_ids = set(features['job_id'].astype(str))
+    legacy_ids = {
+        str(row.get('source_job_id') or row.get('job_id'))
+        for row in existing_rows
+        if row.get('source_job_id') or row.get('job_id')
+    }
+    missing_ids = legacy_ids - rebuilt_ids
+    if missing_ids:
+        raise RuntimeError(
+            'Legacy cumulative history contains jobs missing from archived raw batches; '
+            f'cannot safely rebuild: {sorted(missing_ids)[:5]}.'
+        )
+    valid_ids = set(cleaned['job_id'].astype(str))
+    market_rows = json.loads(features.to_json(orient='records', date_format='iso'))
+    search_rows = json.loads(search_history.to_json(orient='records', date_format='iso'))
+    search_rows = [row for row in search_rows if str(row.get('job_id')) in valid_ids]
+    LOGGER.info(
+        'Rebuilt legacy cumulative history from %s archived raw rows into %s featured jobs',
+        len(raw_archives),
+        len(market_rows),
+    )
+    return market_rows, search_rows
 
 
 def run_pipeline(
@@ -170,17 +248,48 @@ def run_pipeline(
     if raw_path is not None:
         outputs['raw_jobs'] = raw_path
     valid_job_ids = set(df_clean['job_id'].astype(str))
-    market_rows = json.loads(df_clean.to_json(orient='records', date_format='iso'))
+    market_rows = json.loads(df_features.to_json(orient='records', date_format='iso'))
     search_rows = json.loads(search_history.to_json(orient='records', date_format='iso'))
     search_rows = [row for row in search_rows if str(row.get('job_id')) in valid_job_ids]
-    market_path, market_snapshot = export_market_history(
-        market_rows,
-        snapshot_id=run_archive_dir.name,
-        history_dir=PROJECT_ROOT / 'data' / 'history',
-        search_history=search_rows,
-    )
+    history_dir = PROJECT_ROOT / 'data' / 'history'
+    history_path = history_dir / 'market_jobs.jsonl'
+    rebuilt = _rebuild_legacy_market_rows(history_path, jobs)
+    if rebuilt is not None:
+        market_rows, search_rows = rebuilt
+    history_dir.mkdir(parents=True, exist_ok=True)
+    with TemporaryDirectory(prefix='.market-stage-', dir=history_dir) as stage_dir:
+        staged_dir = Path(stage_dir)
+        if history_path.exists():
+            shutil.copy2(history_path, staged_dir / 'market_jobs.jsonl')
+        staged_history, _, = export_market_history(
+            market_rows,
+            snapshot_id=run_archive_dir.name,
+            history_dir=staged_dir,
+            search_history=search_rows,
+        )
+        cumulative_market_rows = [
+            json.loads(line)
+            for line in staged_history.read_text(encoding='utf-8').splitlines()
+            if line.strip()
+        ]
+        cumulative_analysis_rows = _select_analysis_jobs(
+            pd.DataFrame(cumulative_market_rows)
+        ).to_dict(orient='records')
+        export_market_bundle(
+            cumulative_analysis_rows,
+            staged_dir / 'packages' / run_archive_dir.name,
+            dataset_version=f'1.0.{datetime.now(timezone.utc):%Y%m%d%H%M%S}',
+            query_config_version='jsearch-role-career-matrix-v1',
+            run_status='partial',
+        )
+        market_path, market_snapshot, market_package = publish_staged_market_outputs(
+            staged_dir,
+            history_dir,
+            run_archive_dir.name,
+        )
     outputs['market_history'] = market_path
     outputs['market_snapshot'] = market_snapshot
+    outputs['market_package'] = market_package
     dataframes = {
         'cleaned_jobs': df_clean,
         'featured_jobs': df_features,

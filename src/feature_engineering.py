@@ -118,7 +118,7 @@ def classify_career_levels(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         for column in ['classified_career_level',
                        'career_keyword',
-                       'source',
+                       'career_level_evidence_source',
                        'career_level_status',
                        ]:
             df[column] = pd.Series(index=df.index, dtype='string')
@@ -127,14 +127,14 @@ def classify_career_levels(df: pd.DataFrame) -> pd.DataFrame:
                        result_type='expand')
     results.columns = ['classified_career_level',
                        'career_keyword',
-                       'source',
+                       'career_level_evidence_source',
                        'career_level_status',
                        ]
     df[results.columns] = results
     senior_mask = df['is_senior']
     df.loc[senior_mask, 'classified_career_level'] = 'potential_senior'
     df.loc[senior_mask, 'career_keyword'] = 'seniority keyword'
-    df.loc[senior_mask, 'source'] = 'job_title'
+    df.loc[senior_mask, 'career_level_evidence_source'] = 'job_title'
     df.loc[senior_mask, 'career_level_status'] = 'manual_review'
     return df
 

@@ -5,6 +5,7 @@ import pytest
 
 from src.market_export import (
     calculate_market_statistics,
+    export_market_bundle,
     export_market_history,
     to_market_job,
 )
@@ -59,6 +60,23 @@ def test_market_export_maps_contract_dimensions_and_deduplicates_skill_ids():
     assert exported['description_analyzable'] is True
 
 
+def test_date_only_posting_value_remains_date_precision_without_midnight_time():
+    exported = to_market_job({
+        'job_id': 'date-only',
+        'job_title': 'Data Analyst',
+        'classified_role_family': 'data_analyst',
+        'role_status': 'target',
+        'classified_career_level': 'internship',
+        'market_area': 'unknown',
+        'collected_at_utc': '2026-10-11T12:00:00Z',
+        'posted_date': '2026-10-10',
+        'job_description': None,
+    })
+    assert exported['posted_at'] is None
+    assert exported['posted_date'] == '2026-10-10'
+    assert exported['posted_precision'] == 'date'
+
+
 def test_market_export_preserves_review_routing_and_missing_description():
     exported = to_market_job({
         'job_id': 'job-review',
@@ -78,6 +96,22 @@ def test_market_export_preserves_review_routing_and_missing_description():
     assert exported['description_analyzable'] is False
 
 
+def test_market_export_handles_legacy_career_evidence_in_source_field():
+    exported = to_market_job({
+        'source': 'job_title',
+        'job_id': 'legacy-source',
+        'job_title': 'Data Analyst Intern',
+        'classified_role_family': 'data_analyst',
+        'role_status': 'target',
+        'classified_career_level': 'internship',
+        'market_area': 'unknown',
+        'collected_at_utc': '2026-10-11T12:00:00Z',
+        'job_description': None,
+    })
+    assert exported['source'] == 'jsearch'
+    assert exported['source_job_id'] == 'legacy-source'
+
+
 def test_market_statistics_includes_missing_description_in_total_but_not_denominator():
     jobs = [{
         'role_id': 'data_analyst',
@@ -94,6 +128,62 @@ def test_market_statistics_includes_missing_description_in_total_but_not_denomin
         'analyzable_description_count': 0,
         'skills': [{'skill_id': 'python', 'mention_count': 0, 'mention_rate': None}],
     }
+
+
+def test_default_skill_list_comes_from_the_filtered_market_sample():
+    jobs = [
+        {
+            'role_id': 'data_analyst',
+            'role_classification_status': 'classified',
+            'career_level': 'internship',
+            'career_level_status': 'classified',
+            'description_analyzable': True,
+            'technical_skill_ids': ['python'],
+            'soft_skill_ids': [],
+        },
+        {
+            'role_id': 'data_engineer',
+            'role_classification_status': 'classified',
+            'career_level': 'internship',
+            'career_level_status': 'classified',
+            'description_analyzable': True,
+            'technical_skill_ids': ['spark'],
+            'soft_skill_ids': [],
+        },
+    ]
+    result = calculate_market_statistics(jobs, role_ids=['data_analyst'])
+    assert [skill['skill_id'] for skill in result['skills']] == ['python']
+
+
+def test_market_package_validates_and_excludes_raw_description(tmp_path):
+    description = 'A' * 600
+    package_dir = export_market_bundle(
+        [{
+            'job_id': 'public-1',
+            'source': 'jsearch',
+            'job_title': 'Data Analyst Intern',
+            'classified_role_family': 'data_analyst',
+            'role_status': 'target',
+            'classified_career_level': 'internship',
+            'market_area': 'Toronto GTA',
+            'job_posted_at_datetime_utc': '2026-10-10T12:00:00Z',
+            'collected_at_utc': '2026-10-11T12:00:00Z',
+            'job_description': description,
+            'technical_skills': ['python'],
+            'soft_skills': [],
+        }],
+        tmp_path / 'package',
+        dataset_version='1.0.1',
+        query_config_version='jsearch-role-career-matrix-v1',
+    )
+    bundle = json.loads((package_dir / 'bundle.json').read_text(encoding='utf-8'))
+    stats = json.loads((package_dir / 'reference_statistics.json').read_text(encoding='utf-8'))
+    assert bundle['manifest']['run_status'] == 'partial'
+    assert bundle['manifest']['sample_count'] == 1
+    assert 'job_description' not in bundle['market_jobs'][0]
+    assert stats['job_count'] == 1
+    assert stats['skills'] == [{'skill_id': 'python', 'mention_count': 1, 'mention_rate': 1.0}]
+    assert (package_dir / 'SHA256SUMS.txt').exists()
 
 
 def test_replaying_same_batch_is_idempotent_and_preserves_original_seen_times(tmp_path):

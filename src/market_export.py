@@ -1,4 +1,5 @@
 import json
+import hashlib
 import math
 import os
 import re
@@ -6,7 +7,13 @@ import tempfile
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from config.settings import CORE_CAREER_LEVELS, CORE_ROLE_FAMILIES, MIN_DESCRIPTION_LENGTH
+from config.settings import (
+    CORE_CAREER_LEVELS,
+    CORE_ROLE_FAMILIES,
+    MIN_DESCRIPTION_LENGTH,
+    SOFT_SKILL_KEYWORDS,
+    TECHNICAL_SKILLS_KEYWORDS,
+)
 
 
 MARKET_AREA_IDS = {
@@ -48,6 +55,12 @@ def _posting_date(record: dict) -> tuple[str | None, str | None, str]:
     if isinstance(value, date) and not isinstance(value, datetime):
         return None, value.isoformat(), 'date'
     text = str(value).strip()
+    if re.fullmatch(r'\d{4}-\d{2}-\d{2}', text):
+        try:
+            parsed_date = date.fromisoformat(text)
+        except ValueError as error:
+            raise ValueError(f'Invalid job posting date: {value!r}.') from error
+        return None, parsed_date.isoformat(), 'date'
     try:
         parsed = datetime.fromisoformat(text.replace('Z', '+00:00'))
     except ValueError:
@@ -183,12 +196,6 @@ def calculate_market_statistics(
         )
     if skill_ids is not None and any(not isinstance(skill_id, str) or not skill_id for skill_id in skill_ids):
         raise ValueError('skill_ids must contain non-empty strings.')
-    selected_skills = sorted(set(skill_ids or {
-        skill_id
-        for job in market_jobs
-        for skill_id in (job.get('technical_skill_ids') or []) + (job.get('soft_skill_ids') or [])
-    }))
-
     sample = []
     for job in market_jobs:
         if job.get('role_classification_status') != 'classified' or job.get('role_id') not in CORE_ROLE_FAMILIES:
@@ -208,6 +215,11 @@ def calculate_market_statistics(
                 continue
         sample.append(job)
 
+    selected_skills = sorted(set(skill_ids or {
+        skill_id
+        for job in sample
+        for skill_id in (job.get('technical_skill_ids') or []) + (job.get('soft_skill_ids') or [])
+    }))
     analyzable_sample = [job for job in sample if job.get('description_analyzable') is True]
     skill_stats = []
     for skill_id in selected_skills:
@@ -226,6 +238,208 @@ def calculate_market_statistics(
         'analyzable_description_count': len(analyzable_sample),
         'skills': skill_stats,
     }
+
+
+def _skill_catalog(market_jobs: list[dict]) -> list[dict]:
+    categories = {
+        **{skill_id: ('technical', aliases) for skill_id, aliases in TECHNICAL_SKILLS_KEYWORDS.items()},
+        **{skill_id: ('soft', aliases) for skill_id, aliases in SOFT_SKILL_KEYWORDS.items()},
+    }
+    used_ids = {
+        skill_id
+        for job in market_jobs
+        for skill_id in job['technical_skill_ids'] + job['soft_skill_ids']
+    }
+    labels = {
+        'aws': 'AWS',
+        'bi': 'BI',
+        'gcp': 'Google Cloud Platform',
+        'r': 'R',
+        'sql': 'SQL',
+        'power_bi': 'Power BI',
+        'scikit_learn': 'scikit-learn',
+    }
+    catalog = []
+    for skill_id in sorted(used_ids):
+        category, aliases = categories.get(skill_id, ('technical', [skill_id.replace('_', ' ')]))
+        catalog.append({
+            'skill_id': skill_id,
+            'label': labels.get(skill_id, skill_id.replace('_', ' ').title()),
+            'category': category,
+            'aliases': sorted(set(aliases)),
+        })
+    return catalog
+
+
+def _date_range(values: list[str | None]) -> tuple[str | None, str | None]:
+    dates = sorted(value for value in values if value)
+    return (dates[0], dates[-1]) if dates else (None, None)
+
+
+def _validate_bundle(bundle: dict, contracts_dir: Path) -> None:
+    from jsonschema import Draft202012Validator, FormatChecker
+    from referencing import Registry, Resource
+
+    schemas_dir = contracts_dir / 'schemas'
+    schemas = [
+        json.loads(path.read_text(encoding='utf-8'))
+        for path in schemas_dir.glob('*.schema.json')
+    ]
+    registry = Registry().with_resources(
+        (schema['$id'], Resource.from_contents(schema))
+        for schema in schemas
+    )
+    bundle_schema = next(schema for schema in schemas if schema['$id'].endswith('/bundle.schema.json'))
+    validator = Draft202012Validator(
+        bundle_schema,
+        registry=registry,
+        format_checker=FormatChecker(),
+    )
+    errors = sorted(validator.iter_errors(bundle), key=lambda error: list(error.absolute_path))
+    if errors:
+        details = '; '.join(
+            f'{"/".join(str(part) for part in error.absolute_path) or "<root>"}: {error.message}'
+            for error in errors[:10]
+        )
+        raise ValueError(f'Generated market bundle violates the shared contract: {details}')
+
+    job_keys = [job['job_key'] for job in bundle['market_jobs']]
+    skill_ids = [skill['skill_id'] for skill in bundle['skills']]
+    if len(job_keys) != len(set(job_keys)):
+        raise ValueError('Generated market bundle contains duplicate job keys.')
+    if len(skill_ids) != len(set(skill_ids)):
+        raise ValueError('Generated market bundle contains duplicate skill IDs.')
+    referenced_skills = {
+        skill_id
+        for job in bundle['market_jobs']
+        for skill_id in job['technical_skill_ids'] + job['soft_skill_ids']
+    }
+    if not referenced_skills <= set(skill_ids):
+        raise ValueError('Generated market bundle references skills absent from its catalog.')
+    if bundle['manifest']['sample_count'] != len(bundle['market_jobs']):
+        raise ValueError('Generated market bundle sample_count does not match market_jobs.')
+
+
+def export_market_bundle(
+    records: list[dict],
+    output_dir: Path,
+    *,
+    dataset_version: str,
+    query_config_version: str,
+    run_status: str = 'partial',
+    contracts_dir: Path | None = None,
+) -> Path:
+    """Write a validated, description-free contract bundle and reference statistics."""
+    if run_status not in {'complete', 'partial'}:
+        raise ValueError('Only complete or partial runs can be exported as a market bundle.')
+    if not re.fullmatch(r'\d+\.\d+\.\d+', dataset_version):
+        raise ValueError('dataset_version must use semantic version format.')
+    if not query_config_version:
+        raise ValueError('query_config_version must be non-empty.')
+
+    market_jobs = [to_market_job(record) for record in records]
+    market_jobs.sort(key=lambda job: job['job_key'])
+    collected_from, collected_to = _date_range([
+        _timestamp_text(_utc_datetime(record.get('first_seen_at') or record.get('collected_at_utc')))
+        for record in records
+    ] + [
+        _timestamp_text(_utc_datetime(record.get('last_seen_at') or record.get('collected_at_utc')))
+        for record in records
+    ])
+    posting_from, posting_to = _date_range([job['posted_date'] for job in market_jobs])
+    skills = _skill_catalog(market_jobs)
+    generated_at = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+    bundle = {
+        'manifest': {
+            'schema_version': '1.0.0',
+            'dataset_version': dataset_version,
+            'generated_at': generated_at,
+            'collected_from': collected_from,
+            'collected_to': collected_to,
+            'posting_from': posting_from,
+            'posting_to': posting_to,
+            'query_config_version': query_config_version,
+            'run_status': run_status,
+            'sample_count': len(market_jobs),
+        },
+        'market_jobs': market_jobs,
+        'skills': skills,
+        'organizers': [],
+        'courses': [],
+        'resources': [],
+        'opportunities': [],
+    }
+    contracts_dir = contracts_dir or Path(__file__).resolve().parents[1] / 'contracts'
+    _validate_bundle(bundle, Path(contracts_dir))
+    reference_statistics = calculate_market_statistics(market_jobs)
+
+    output_dir = Path(output_dir)
+    output_dir.parent.mkdir(parents=True, exist_ok=True)
+    if output_dir.exists():
+        raise FileExistsError(f'Market package output already exists: {output_dir}')
+    temporary_dir_context = tempfile.TemporaryDirectory(
+        prefix=f'.{output_dir.name}-',
+        dir=output_dir.parent,
+    )
+    temporary_dir = Path(temporary_dir_context.name)
+    files = {
+        'bundle.json': bundle,
+        'manifest.json': bundle['manifest'],
+        'market_jobs.json': market_jobs,
+        'skills.json': skills,
+        'reference_statistics.json': reference_statistics,
+    }
+    for filename, content in files.items():
+        temporary_path = temporary_dir / f'{filename}.tmp'
+        temporary_path.write_text(
+            json.dumps(content, ensure_ascii=False, indent=2, allow_nan=False) + '\n',
+            encoding='utf-8',
+        )
+        os.replace(temporary_path, temporary_dir / filename)
+    digest = hashlib.sha256((temporary_dir / 'bundle.json').read_bytes()).hexdigest()
+    (temporary_dir / 'SHA256SUMS.txt').write_text(f'{digest}  bundle.json\n', encoding='ascii')
+    try:
+        os.rename(temporary_dir, output_dir)
+    except FileExistsError as error:
+        raise FileExistsError(f'Market package output already exists: {output_dir}') from error
+    finally:
+        temporary_dir_context.cleanup()
+    return output_dir
+
+
+def publish_staged_market_outputs(staged_dir: Path, history_dir: Path, snapshot_id: str) -> tuple[Path, Path, Path]:
+    """Atomically switch a validated staged history, snapshot, and package into place."""
+    staged_dir = Path(staged_dir)
+    history_dir = Path(history_dir)
+    staged_market = staged_dir / 'market_jobs.jsonl'
+    staged_snapshot = staged_dir / 'snapshots' / snapshot_id
+    staged_package = staged_dir / 'packages' / snapshot_id
+    target_market = history_dir / 'market_jobs.jsonl'
+    target_snapshot = history_dir / 'snapshots' / snapshot_id
+    target_package = history_dir / 'packages' / snapshot_id
+    required_staged = (staged_market, staged_snapshot, staged_package)
+    if any(not path.exists() for path in required_staged):
+        raise FileNotFoundError('Staged market outputs are incomplete; no outputs were published.')
+    if target_snapshot.exists() or target_package.exists():
+        raise FileExistsError(f'Market snapshot or package already exists for run {snapshot_id}.')
+
+    target_snapshot.parent.mkdir(parents=True, exist_ok=True)
+    target_package.parent.mkdir(parents=True, exist_ok=True)
+    moved_snapshot = False
+    moved_package = False
+    try:
+        os.rename(staged_snapshot, target_snapshot)
+        moved_snapshot = True
+        os.rename(staged_package, target_package)
+        moved_package = True
+        os.replace(staged_market, target_market)
+    except OSError:
+        if moved_package and target_package.exists():
+            os.rename(target_package, staged_package)
+        if moved_snapshot and target_snapshot.exists():
+            os.rename(target_snapshot, staged_snapshot)
+        raise
+    return target_market, target_snapshot, target_package
 
 
 def _normalize_json(value):
@@ -320,6 +534,8 @@ def _write_atomic(path: Path, content: str) -> None:
 
 def _identity(record: dict) -> tuple[str, str]:
     source = record.get('source') or 'jsearch'
+    if source in {'job_title', 'job_description', 'unknown'}:
+        source = record.get('provider_source') or 'jsearch'
     adapter = SOURCE_ID_ADAPTERS.get(source)
     if adapter is None:
         raise ValueError(f'No source ID adapter is registered for {source!r}.')
