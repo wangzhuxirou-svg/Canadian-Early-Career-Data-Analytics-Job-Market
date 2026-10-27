@@ -71,6 +71,17 @@
       "aliases": ["PowerBI"]
     }
   ],
+  "organizers": [
+    {
+      "organizer_id": "example_club",
+      "name": "Example Club",
+      "username": "example_club",
+      "profile_url": "https://www.instagram.com/example_club/",
+      "enabled": true,
+      "priority": 1,
+      "last_verified_at": null
+    }
+  ],
   "courses": [
     {
       "course_id": "demo_course",
@@ -105,6 +116,10 @@
       "source_post_id": "example_post",
       "source_post_ids": ["example_post"],
       "description": "Synthetic fixture event; not a real UTSC opportunity.",
+      "responsibilities": "Synthetic example responsibilities.",
+      "time_commitment": "Two hours",
+      "compensation_status": "not_stated",
+      "ccr_status": "not_stated",
       "activity_type_ids": ["workshop"],
       "topic_ids": ["data_ai"],
       "skill_ids": ["python"],
