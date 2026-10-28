@@ -15,6 +15,7 @@ __pycache__/
 # Logs
 *.log
 data/history/
+data/history.zip
 data/runs/
 .pytest-review-temp*/
 h origin main

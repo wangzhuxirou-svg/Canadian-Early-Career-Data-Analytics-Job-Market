@@ -5,12 +5,14 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 from referencing import Registry, Resource
-from src.market_export import to_market_job
+from src.market_export import export_market_bundle, to_market_job
+from config.settings import SOFT_SKILL_KEYWORDS, TECHNICAL_SKILLS_KEYWORDS
 
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMAS_DIR = ROOT / "contracts" / "schemas"
 FIXTURES_DIR = ROOT / "contracts" / "fixtures"
+RESOURCES_DIR = ROOT / "resources"
 
 
 def load_json(path: Path):
@@ -67,6 +69,58 @@ def test_bundle_fixtures_match_contract(fixture_name, schemas_and_registry):
     bundle = load_json(FIXTURES_DIR / fixture_name)
     validate(bundle, schemas["bundle"], registry)
     assert bundle["manifest"]["sample_count"] == len(bundle["market_jobs"])
+
+
+@pytest.mark.parametrize(
+    ("filename", "schema_name", "id_field", "skill_field"),
+    [
+        ("courses.json", "course", "course_id", "candidate_skill_ids"),
+        ("learning_resources.json", "resource", "resource_id", "skill_ids"),
+    ],
+)
+def test_d5_reference_files_match_contract_and_catalog(
+    filename, schema_name, id_field, skill_field, schemas_and_registry
+):
+    schemas, registry = schemas_and_registry
+    records = load_json(RESOURCES_DIR / filename)
+    valid_skills = set(TECHNICAL_SKILLS_KEYWORDS) | set(SOFT_SKILL_KEYWORDS)
+    ids = [record[id_field] for record in records]
+
+    assert len(ids) == len(set(ids))
+    for record in records:
+        validate(record, schemas[schema_name], registry)
+        assert set(record[skill_field]) <= valid_skills
+        if schema_name == "resource" and record[skill_field]:
+            assert record.get("mapping_evidence")
+
+
+def test_market_package_includes_d5_references_and_their_skills(tmp_path):
+    package_dir = export_market_bundle(
+        [{
+            "job_id": "d5-package-job",
+            "source": "jsearch",
+            "job_title": "Data Analyst Intern",
+            "classified_role_family": "data_analyst",
+            "role_status": "target",
+            "classified_career_level": "internship",
+            "market_area": "unknown",
+            "collected_at_utc": "2026-10-11T12:00:00Z",
+            "job_description": None,
+            "technical_skills": ["python"],
+            "soft_skills": [],
+        }],
+        tmp_path / "package",
+        dataset_version="1.0.1",
+        query_config_version="jsearch-role-career-matrix-v1",
+    )
+    bundle = load_json(package_dir / "bundle.json")
+    skills = {skill["skill_id"] for skill in bundle["skills"]}
+
+    assert bundle["courses"] == load_json(RESOURCES_DIR / "courses.json")
+    assert bundle["resources"] == load_json(RESOURCES_DIR / "learning_resources.json")
+    assert "r" in skills
+    assert (package_dir / "courses.json").exists()
+    assert (package_dir / "learning_resources.json").exists()
 
 
 def test_resource_mapping_evidence_is_optional_for_existing_records(schemas_and_registry):

@@ -240,7 +240,11 @@ def calculate_market_statistics(
     }
 
 
-def _skill_catalog(market_jobs: list[dict]) -> list[dict]:
+def _skill_catalog(
+    market_jobs: list[dict],
+    courses: list[dict],
+    resources: list[dict],
+) -> list[dict]:
     categories = {
         **{skill_id: ('technical', aliases) for skill_id, aliases in TECHNICAL_SKILLS_KEYWORDS.items()},
         **{skill_id: ('soft', aliases) for skill_id, aliases in SOFT_SKILL_KEYWORDS.items()},
@@ -250,6 +254,16 @@ def _skill_catalog(market_jobs: list[dict]) -> list[dict]:
         for job in market_jobs
         for skill_id in job['technical_skill_ids'] + job['soft_skill_ids']
     }
+    used_ids.update(
+        skill_id
+        for course in courses
+        for skill_id in course['candidate_skill_ids']
+    )
+    used_ids.update(
+        skill_id
+        for resource in resources
+        for skill_id in resource['skill_ids']
+    )
     labels = {
         'aws': 'AWS',
         'bi': 'BI',
@@ -314,6 +328,16 @@ def _validate_bundle(bundle: dict, contracts_dir: Path) -> None:
         for job in bundle['market_jobs']
         for skill_id in job['technical_skill_ids'] + job['soft_skill_ids']
     }
+    referenced_skills.update(
+        skill_id
+        for course in bundle['courses']
+        for skill_id in course['candidate_skill_ids']
+    )
+    referenced_skills.update(
+        skill_id
+        for resource in bundle['resources']
+        for skill_id in resource['skill_ids']
+    )
     if not referenced_skills <= set(skill_ids):
         raise ValueError('Generated market bundle references skills absent from its catalog.')
     if bundle['manifest']['sample_count'] != len(bundle['market_jobs']):
@@ -347,7 +371,12 @@ def export_market_bundle(
         for record in records
     ])
     posting_from, posting_to = _date_range([job['posted_date'] for job in market_jobs])
-    skills = _skill_catalog(market_jobs)
+    resources_dir = Path(__file__).resolve().parents[1] / 'resources'
+    courses = json.loads((resources_dir / 'courses.json').read_text(encoding='utf-8'))
+    learning_resources = json.loads(
+        (resources_dir / 'learning_resources.json').read_text(encoding='utf-8')
+    )
+    skills = _skill_catalog(market_jobs, courses, learning_resources)
     generated_at = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
     bundle = {
         'manifest': {
@@ -365,8 +394,8 @@ def export_market_bundle(
         'market_jobs': market_jobs,
         'skills': skills,
         'organizers': [],
-        'courses': [],
-        'resources': [],
+        'courses': courses,
+        'resources': learning_resources,
         'opportunities': [],
     }
     contracts_dir = contracts_dir or Path(__file__).resolve().parents[1] / 'contracts'
@@ -387,6 +416,8 @@ def export_market_bundle(
         'manifest.json': bundle['manifest'],
         'market_jobs.json': market_jobs,
         'skills.json': skills,
+        'courses.json': courses,
+        'learning_resources.json': learning_resources,
         'reference_statistics.json': reference_statistics,
     }
     for filename, content in files.items():
