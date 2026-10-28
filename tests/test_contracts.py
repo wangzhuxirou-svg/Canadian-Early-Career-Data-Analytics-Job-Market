@@ -94,6 +94,23 @@ def test_d5_reference_files_match_contract_and_catalog(
             assert record.get("mapping_evidence")
 
 
+def test_d6_organizer_targets_match_contract_without_claiming_verification(
+    schemas_and_registry,
+):
+    schemas, registry = schemas_and_registry
+    organizers = load_json(RESOURCES_DIR / "organizers.json")
+    organizer_ids = [record["organizer_id"] for record in organizers]
+    usernames = [record["username"].casefold() for record in organizers]
+
+    assert len(organizers) == 21
+    assert len(organizer_ids) == len(set(organizer_ids))
+    assert len(usernames) == len(set(usernames))
+    for organizer in organizers:
+        validate(organizer, schemas["organizer"], registry)
+        assert organizer["enabled"] is True
+        assert organizer["last_verified_at"] is None
+
+
 def test_market_package_includes_d5_references_and_their_skills(tmp_path):
     package_dir = export_market_bundle(
         [{
