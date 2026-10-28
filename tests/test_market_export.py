@@ -1,0 +1,298 @@
+import json
+from pathlib import Path
+
+import pytest
+
+from src.market_export import (
+    calculate_market_statistics,
+    export_market_bundle,
+    export_market_history,
+    to_market_job,
+)
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def read_jsonl(path):
+    return [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines() if line]
+
+
+def test_market_statistics_match_shared_golden_cases():
+    fixture = json.loads(
+        (ROOT / 'contracts' / 'fixtures' / 'market_statistics_cases.json').read_text(encoding='utf-8')
+    )
+    for case in fixture['cases']:
+        result = calculate_market_statistics(
+            fixture['market_jobs'],
+            **case['filters'],
+            skill_ids=case['skill_ids'],
+        )
+        assert result == case['expected'], case['case_id']
+
+
+def test_market_export_maps_contract_dimensions_and_deduplicates_skill_ids():
+    description = 'A' * 600
+    exported = to_market_job({
+        'source': 'jsearch',
+        'job_id': 'job-4',
+        'job_title': 'Financial Analyst Intern',
+        'employer_name': 'Example',
+        'job_apply_link': 'https://jobs.example/job-4',
+        'classified_role_family': 'financial_risk_analyst',
+        'classified_role_subtype': 'financial_analysis',
+        'role_status': 'target',
+        'classified_career_level': 'internship',
+        'market_area': 'Toronto GTA',
+        'job_posted_at_datetime_utc': '2026-10-10T12:00:00Z',
+        'collected_at_utc': '2026-10-11T12:00:00Z',
+        'job_description': description,
+        'technical_skills': ['python', 'python', 'sql'],
+        'soft_skills': ['teamwork'],
+    })
+    assert exported['role_id'] == 'financial_risk_analyst'
+    assert exported['role_subtype'] == 'financial_analysis'
+    assert exported['career_level'] == 'internship'
+    assert exported['market_area'] == 'toronto_gta'
+    assert exported['posted_date'] == '2026-10-10'
+    assert exported['posted_precision'] == 'datetime'
+    assert exported['technical_skill_ids'] == ['python', 'sql']
+    assert exported['description_analyzable'] is True
+
+
+def test_date_only_posting_value_remains_date_precision_without_midnight_time():
+    exported = to_market_job({
+        'job_id': 'date-only',
+        'job_title': 'Data Analyst',
+        'classified_role_family': 'data_analyst',
+        'role_status': 'target',
+        'classified_career_level': 'internship',
+        'market_area': 'unknown',
+        'collected_at_utc': '2026-10-11T12:00:00Z',
+        'posted_date': '2026-10-10',
+        'job_description': None,
+    })
+    assert exported['posted_at'] is None
+    assert exported['posted_date'] == '2026-10-10'
+    assert exported['posted_precision'] == 'date'
+
+
+def test_market_export_preserves_review_routing_and_missing_description():
+    exported = to_market_job({
+        'job_id': 'job-review',
+        'job_title': 'Data Analyst and Data Scientist',
+        'classified_role_family': 'hybrid',
+        'role_status': 'manual_review',
+        'classified_career_level': 'unknown',
+        'market_area': 'unknown',
+        'collected_at_utc': '2026-10-11T12:00:00Z',
+        'job_description': None,
+    })
+    assert exported['role_id'] is None
+    assert exported['role_classification_status'] == 'needs_review'
+    assert exported['role_classification_label'] == 'hybrid'
+    assert exported['career_level_status'] == 'needs_review'
+    assert exported['description_status'] == 'missing'
+    assert exported['description_analyzable'] is False
+
+
+def test_market_export_handles_legacy_career_evidence_in_source_field():
+    exported = to_market_job({
+        'source': 'job_title',
+        'job_id': 'legacy-source',
+        'job_title': 'Data Analyst Intern',
+        'classified_role_family': 'data_analyst',
+        'role_status': 'target',
+        'classified_career_level': 'internship',
+        'market_area': 'unknown',
+        'collected_at_utc': '2026-10-11T12:00:00Z',
+        'job_description': None,
+    })
+    assert exported['source'] == 'jsearch'
+    assert exported['source_job_id'] == 'legacy-source'
+
+
+def test_market_statistics_includes_missing_description_in_total_but_not_denominator():
+    jobs = [{
+        'role_id': 'data_analyst',
+        'role_classification_status': 'classified',
+        'career_level': 'internship',
+        'career_level_status': 'classified',
+        'description_analyzable': False,
+        'technical_skill_ids': ['python'],
+        'soft_skill_ids': [],
+    }]
+    result = calculate_market_statistics(jobs, skill_ids=['python'])
+    assert result == {
+        'job_count': 1,
+        'analyzable_description_count': 0,
+        'skills': [{'skill_id': 'python', 'mention_count': 0, 'mention_rate': None}],
+    }
+
+
+def test_default_skill_list_comes_from_the_filtered_market_sample():
+    jobs = [
+        {
+            'role_id': 'data_analyst',
+            'role_classification_status': 'classified',
+            'career_level': 'internship',
+            'career_level_status': 'classified',
+            'description_analyzable': True,
+            'technical_skill_ids': ['python'],
+            'soft_skill_ids': [],
+        },
+        {
+            'role_id': 'data_engineer',
+            'role_classification_status': 'classified',
+            'career_level': 'internship',
+            'career_level_status': 'classified',
+            'description_analyzable': True,
+            'technical_skill_ids': ['spark'],
+            'soft_skill_ids': [],
+        },
+    ]
+    result = calculate_market_statistics(jobs, role_ids=['data_analyst'])
+    assert [skill['skill_id'] for skill in result['skills']] == ['python']
+
+
+def test_market_package_validates_and_excludes_raw_description(tmp_path):
+    description = 'A' * 600
+    package_dir = export_market_bundle(
+        [{
+            'job_id': 'public-1',
+            'source': 'jsearch',
+            'job_title': 'Data Analyst Intern',
+            'classified_role_family': 'data_analyst',
+            'role_status': 'target',
+            'classified_career_level': 'internship',
+            'market_area': 'Toronto GTA',
+            'job_posted_at_datetime_utc': '2026-10-10T12:00:00Z',
+            'collected_at_utc': '2026-10-11T12:00:00Z',
+            'job_description': description,
+            'technical_skills': ['python'],
+            'soft_skills': [],
+        }],
+        tmp_path / 'package',
+        dataset_version='1.0.1',
+        query_config_version='jsearch-role-career-matrix-v1',
+    )
+    bundle = json.loads((package_dir / 'bundle.json').read_text(encoding='utf-8'))
+    stats = json.loads((package_dir / 'reference_statistics.json').read_text(encoding='utf-8'))
+    assert bundle['manifest']['run_status'] == 'partial'
+    assert bundle['manifest']['sample_count'] == 1
+    assert 'job_description' not in bundle['market_jobs'][0]
+    assert stats['job_count'] == 1
+    assert stats['skills'] == [{'skill_id': 'python', 'mention_count': 1, 'mention_rate': 1.0}]
+    assert (package_dir / 'SHA256SUMS.txt').exists()
+
+
+def test_replaying_same_batch_is_idempotent_and_preserves_original_seen_times(tmp_path):
+    job = {
+        'job_id': 'job-1',
+        'job_title': 'Data Analyst',
+        'collected_at_utc': '2026-10-01T10:00:00Z',
+        'role_family': 'data_analyst',
+        'search_level': 'internship',
+        'search_query': 'data analyst internship',
+        'page_number': 1,
+    }
+
+    market_path, first_snapshot = export_market_history(
+        [job],
+        snapshot_id='first-run',
+        history_dir=tmp_path,
+        search_history=[job],
+    )
+    first = read_jsonl(market_path)[0]
+    assert first['source'] == 'jsearch'
+    assert first['source_job_id'] == 'job-1'
+    assert first['first_seen_at'] == '2026-10-01T10:00:00Z'
+    assert first['last_seen_at'] == '2026-10-01T10:00:00Z'
+    assert len(first['collection_history']) == 1
+
+    _, second_snapshot = export_market_history(
+        [job],
+        snapshot_id='replay-run',
+        history_dir=tmp_path,
+        search_history=[job],
+    )
+    replayed = read_jsonl(market_path)
+    manifest = json.loads((second_snapshot / 'manifest.json').read_text(encoding='utf-8'))
+
+    assert len(replayed) == 1
+    assert replayed[0]['first_seen_at'] == first['first_seen_at']
+    assert replayed[0]['last_seen_at'] == first['last_seen_at']
+    assert replayed[0]['collected_at_utc'] == first['collected_at_utc']
+    assert replayed[0]['collection_history'] == first['collection_history']
+    assert manifest['cumulative_job_count'] == 1
+    assert manifest['query_coverage_is_not_market_growth'] is True
+    assert (first_snapshot / 'market_jobs.jsonl').exists()
+
+
+def test_new_observation_updates_last_seen_and_preserves_prior_snapshot(tmp_path):
+    first = {
+        'source': 'jsearch',
+        'source_job_id': 'job-2',
+        'job_id': 'job-2',
+        'job_title': 'Data Analyst',
+        'collected_at_utc': '2026-10-01T10:00:00Z',
+        'role_family': 'data_analyst',
+        'search_level': 'internship',
+        'search_query': 'data analyst internship',
+        'page_number': 1,
+    }
+    newer = {
+        **first,
+        'job_title': 'Senior Data Analyst',
+        'collected_at_utc': '2026-10-08T10:00:00Z',
+        'role_family': 'business_analyst',
+        'search_level': 'entry_level',
+        'search_query': 'business analyst entry level',
+    }
+
+    _, first_snapshot = export_market_history(
+        [first], 'snapshot-1', tmp_path, search_history=[first],
+    )
+    first_snapshot_bytes = (first_snapshot / 'market_jobs.jsonl').read_bytes()
+    market_path, second_snapshot = export_market_history(
+        [newer], 'snapshot-2', tmp_path, search_history=[newer],
+    )
+    current = read_jsonl(market_path)[0]
+
+    assert len(read_jsonl(market_path)) == 1
+    assert current['job_title'] == 'Senior Data Analyst'
+    assert current['first_seen_at'] == '2026-10-01T10:00:00Z'
+    assert current['last_seen_at'] == '2026-10-08T10:00:00Z'
+    assert current['collected_at_utc'] == '2026-10-01T10:00:00Z'
+    assert len(current['collection_history']) == 2
+    assert (first_snapshot / 'market_jobs.jsonl').read_bytes() == first_snapshot_bytes
+    assert (second_snapshot / 'market_jobs.jsonl').exists()
+
+    third_path, _ = export_market_history(
+        [first], 'old-replay', tmp_path, search_history=[first],
+    )
+    after_old_replay = read_jsonl(third_path)[0]
+    assert after_old_replay['job_title'] == 'Senior Data Analyst'
+    assert after_old_replay['last_seen_at'] == '2026-10-08T10:00:00Z'
+
+
+def test_snapshot_is_immutable_and_missing_source_ids_fail(tmp_path):
+    job = {'job_id': 'job-3'}
+    _, snapshot = export_market_history([job], 'immutable-run', tmp_path)
+    original = (snapshot / 'market_jobs.jsonl').read_bytes()
+
+    with pytest.raises(FileExistsError, match='already exists'):
+        export_market_history([job], 'immutable-run', tmp_path)
+    assert (snapshot / 'market_jobs.jsonl').read_bytes() == original
+
+    with pytest.raises(ValueError, match='missing its source job ID'):
+        export_market_history([{'job_title': 'Missing ID'}], 'missing-id', tmp_path)
+
+
+def test_unknown_source_requires_an_explicit_id_adapter(tmp_path):
+    with pytest.raises(ValueError, match='No source ID adapter'):
+        export_market_history(
+            [{'source': 'future_source', 'source_job_id': 'id-1'}],
+            'future-source',
+            tmp_path,
+        )

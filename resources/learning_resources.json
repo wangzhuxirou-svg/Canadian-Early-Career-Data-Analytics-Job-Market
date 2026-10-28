@@ -1,0 +1,427 @@
+[
+  {
+    "resource_id": "utsc-bridge-excel-learning-series",
+    "title": "UTSC BRIDGE: Excel Learning Series with Practice Datasets",
+    "resource_type": "tutorial",
+    "skill_ids": [
+      "excel"
+    ],
+    "level": "beginner",
+    "eligibility_note": "Open educational materials available to users inside and outside U of T; no Management enrolment requirement. Practice requires access to compatible spreadsheet software. No certificate is promised.",
+    "source_url": "https://www.utsc.utoronto.ca/thebridge/bridge-excel-learning-series",
+    "verified_at": "2026-10-28T01:58:14Z",
+    "mapping_evidence": "The series teaches Excel functions, calculations, data cleaning, organization and analysis using short videos, slides and practice spreadsheets."
+  },
+  {
+    "resource_id": "utsc-bridge-excel-intermediate",
+    "title": "UTSC BRIDGE: Excel Tables, Data Validation and Analysis ToolPak",
+    "resource_type": "tutorial",
+    "skill_ids": [
+      "excel"
+    ],
+    "level": "intermediate",
+    "eligibility_note": "Open educational series; complete basic Excel training first. Some ToolPak and macro exercises require a compatible desktop Excel installation.",
+    "source_url": "https://www.utsc.utoronto.ca/thebridge/excel-learning-series-intermediate-level",
+    "verified_at": "2026-10-28T01:58:14Z",
+    "mapping_evidence": "The intermediate series demonstrates Excel tables, advanced filters, data validation, ToolPak regression and sampling, and introductory macros."
+  },
+  {
+    "resource_id": "utsc-library-foundational-data-literacy",
+    "title": "UTSC Library: Foundational Data Literacy Skills Course",
+    "resource_type": "course",
+    "skill_ids": [
+      "excel"
+    ],
+    "level": "beginner",
+    "eligibility_note": "Free self-paced course for undergraduate and graduate students and university staff; a community route is also linked. Exercises support Excel or Google Sheets. CCR requires all 10 modules, all quizzes and a one-page reflection. Quercus enrolment and completion were not tested.",
+    "source_url": "https://www.utsc.utoronto.ca/thebridge/utsc-library-foundational-data-literacy-skills-course",
+    "verified_at": "2026-10-28T01:58:14Z",
+    "mapping_evidence": "The course uses Excel or Google Sheets for data cleaning, sorting and pivot tables, with 10 self-directed modules and quizzes. The Excel mapping applies to the Excel route; a Sheets-only completion does not establish Excel experience."
+  },
+  {
+    "resource_id": "uoft-mdl-r-self-paced",
+    "title": "U of T Map & Data Library: R - An Introduction",
+    "resource_type": "course",
+    "skill_ids": [
+      "r"
+    ],
+    "level": "beginner",
+    "eligibility_note": "University library roadmap links a Quercus self-paced course. UTORid sign-in may be required; enrolment, fee and certificate conditions behind sign-in were not verified. No Management-only restriction is stated on the roadmap.",
+    "source_url": "https://mdl.library.utoronto.ca/support/workshops-training/learning-roadmaps",
+    "verified_at": "2026-10-28T01:58:14Z",
+    "mapping_evidence": "The library roadmap explicitly lists R - An Introduction as an online course under data analysis and programming. Use its R course link, not an expired live session."
+  },
+  {
+    "resource_id": "uoft-mdl-tableau-self-paced",
+    "title": "U of T Map & Data Library: Data Visualization - Practice with Tableau",
+    "resource_type": "course",
+    "skill_ids": [
+      "tableau"
+    ],
+    "level": "beginner",
+    "eligibility_note": "University library roadmap links the Part 2 Tableau practice course in Quercus. UTORid sign-in may be required; enrolment, fees and software entitlement were not verified. No completion credential is promised.",
+    "source_url": "https://mdl.library.utoronto.ca/support/workshops-training/learning-roadmaps",
+    "verified_at": "2026-10-28T01:58:14Z",
+    "mapping_evidence": "The library lists Data Visualization - An Introduction, Part 2 - Practice with Tableau as an online course. Part 1 theory is complementary, not proof of Tableau practice."
+  },
+  {
+    "resource_id": "uoft-scinet-git-self-paced",
+    "title": "U of T SciNet: DAT161 Introduction to Git Version Control",
+    "resource_type": "course",
+    "skill_ids": [
+      "git"
+    ],
+    "level": "beginner",
+    "eligibility_note": "SciNet lists non-graduate-course training as free. This self-paced course links to sign-in: use a CCDB account, or request access from courses@scinet.utoronto.ca if affiliated with a Canadian academic institution and unable to obtain one. Logged-in access was not tested.",
+    "source_url": "https://education.scinet.utoronto.ca/course/view.php?id=1382",
+    "verified_at": "2026-10-28T01:58:14Z",
+    "mapping_evidence": "SciNet explicitly lists DAT161 Intro to Git Version Control as a self-paced course."
+  },
+  {
+    "resource_id": "uoft-scinet-python-recordings",
+    "title": "U of T SciNet: Introduction to Programming in Python - Course Archive",
+    "resource_type": "course",
+    "skill_ids": [
+      "python"
+    ],
+    "level": "beginner",
+    "eligibility_note": "Free training archive, not a currently scheduled live class. SciNet says most past course recordings and slides are openly available; individual access may require guest access or login. Follow SCMP142 in the catalogue. No automatic certificate is promised.",
+    "source_url": "https://education.scinet.utoronto.ca/theme/scinet3/course/index2.php",
+    "verified_at": "2026-10-28T01:58:14Z",
+    "mapping_evidence": "The SciNet catalogue lists SCMP142 Introduction to Programming in Python and past offerings with course materials. This entry is an archive route, not a claim of current registration."
+  },
+  {
+    "resource_id": "utsc-fmi-foundations",
+    "title": "UTSC BRIDGE: FMI Foundations in Financial Modeling",
+    "resource_type": "course",
+    "skill_ids": [],
+    "level": "beginner",
+    "eligibility_note": "The university page advertises the Foundations program free for UTSC Management and Economics students using a U of T email. It describes a 15-hour program and online exam for a digital badge. Eligibility redemption was not tested. AFM accreditation and its exam are separate paid offerings; past scholarship deadlines do not establish a current offer.",
+    "source_url": "https://www.utsc.utoronto.ca/thebridge/financial-modeling-institute-certificates",
+    "verified_at": "2026-10-28T01:58:14Z",
+    "mapping_evidence": "The school describes financial modeling best practices, model design and financial statements. No current tool skill is assigned without explicit tool evidence; this is a finance exploration resource, not a tool-gap match."
+  },
+  {
+    "resource_id": "uoft-bloomberg-market-concepts",
+    "title": "U of T Library: Bloomberg Market Concepts Registration Guide",
+    "resource_type": "course",
+    "skill_ids": [],
+    "level": "beginner",
+    "eligibility_note": "UTM Library describes BMC as a free self-paced online program for U of T students using their university email. Actual account entitlement was not tested; follow the university instructions and verify before paying. Online course eligibility does not grant access to every campus terminal or other Bloomberg certificates.",
+    "source_url": "https://library.utm.utoronto.ca/flc/bloomberg-certifications-quick-start-guide",
+    "verified_at": "2026-10-28T01:58:14Z",
+    "mapping_evidence": "The university guide describes financial-market modules and quizzes leading to a BMC certificate. Bloomberg is not in the current tool catalog, so no tool-gap skill is inferred."
+  },
+  {
+    "resource_id": "uoft-coursera-consortium",
+    "title": "U of T: Coursera Partner Consortium Access",
+    "resource_type": "other",
+    "skill_ids": [],
+    "level": "unknown",
+    "eligibility_note": "Official university access portal, not an individual course. Active U of T students may access selected offerings and completion certificates at no cost using mail.utoronto.ca. Catalogues can change; courses requesting payment may be outside the program. Current signed-in entitlement and individual courses were not tested.",
+    "source_url": "https://onlinelearning.utoronto.ca/coursera/",
+    "verified_at": "2026-10-28T01:58:14Z",
+    "mapping_evidence": "The university describes access to selected Coursera courses. A general platform entitlement does not establish a Python, SQL or other tool mapping; individual courses need separate verification."
+  },
+  {
+    "resource_id": "utsc-entrepreneurship-open-learning",
+    "title": "UTSC BRIDGE: Entrepreneurship Open Learning Series",
+    "resource_type": "course",
+    "skill_ids": [],
+    "level": "beginner",
+    "eligibility_note": "Free, publicly accessible self-paced modules welcome non-business students and community members. Interactive content includes worksheets and rubrics. No software entitlement, academic credit or completion certificate is assumed.",
+    "source_url": "https://utsc.utoronto.ca/thebridge/entrepreneurship-open-learning-series",
+    "verified_at": "2026-10-28T01:58:14Z",
+    "mapping_evidence": "The five modules address entrepreneurship, value propositions, target markets and market research. This is direction exploration; no current tool skill is inferred."
+  },
+  {
+    "resource_id": "tableau-superstore-guided-analysis",
+    "title": "Tableau: Superstore Sales and Profit Dashboard",
+    "resource_type": "tutorial",
+    "skill_ids": [
+      "tableau"
+    ],
+    "level": "beginner",
+    "eligibility_note": "Official guided case; requires a suitable Tableau installation and the sample data. Check software licensing and publishing conditions for the chosen edition. Public sharing is optional; use sample rather than private data.",
+    "source_url": "https://help.tableau.com/current/guides/get-started-tutorial/en-us/get-started-tutorial-home.htm",
+    "verified_at": "2026-10-28T01:58:14Z",
+    "mapping_evidence": "The tutorial builds sales and profitability views, a regional map, a dashboard and a story from the Superstore sample."
+  },
+  {
+    "resource_id": "kaggle-intro-sql-exercises",
+    "title": "Kaggle Learn: Intro to SQL Exercises",
+    "resource_type": "course",
+    "skill_ids": [
+      "sql"
+    ],
+    "level": "beginner",
+    "eligibility_note": "Kaggle lists the course at no cost. An account and access to the hosted exercise environment are needed to run and save work; setup was not tested. Uses BigQuery SQL; the tool mapping is SQL, not a broad GCP competency.",
+    "source_url": "https://www.kaggle.com/learn/intro-to-sql",
+    "verified_at": "2026-10-28T01:58:14Z",
+    "mapping_evidence": "The course pairs lessons with exercises in SELECT, filtering, grouping, sorting, CTEs and joins using BigQuery."
+  },
+  {
+    "resource_id": "kaggle-pandas-exercises",
+    "title": "Kaggle Learn: pandas Hands-on Challenges",
+    "resource_type": "course",
+    "skill_ids": [
+      "pandas"
+    ],
+    "level": "beginner",
+    "eligibility_note": "Recommended for learners with basic Python knowledge. A Kaggle account and hosted notebook access are needed for interactive work; account access and current terms were not tested.",
+    "source_url": "https://www.kaggle.com/learn/pandas",
+    "verified_at": "2026-10-28T01:58:14Z",
+    "mapping_evidence": "The course provides short exercises in reading data, indexing, selection, summary functions, grouping and sorting using pandas."
+  },
+  {
+    "resource_id": "gcp-bigquery-sandbox-practice",
+    "title": "Google Cloud: Query Public Data in BigQuery Sandbox",
+    "resource_type": "tutorial",
+    "skill_ids": [
+      "gcp",
+      "sql"
+    ],
+    "level": "beginner",
+    "eligibility_note": "Requires a Google account and Cloud project. BigQuery Sandbox can be used without a credit card or billing account, within its limits; it excludes features such as DML and streaming. Managed university accounts may have restrictions. Do not enable billing merely to complete this exercise.",
+    "source_url": "https://docs.cloud.google.com/bigquery/docs/sandbox",
+    "verified_at": "2026-10-28T01:58:14Z",
+    "mapping_evidence": "The official sandbox guide introduces BigQuery console access and querying public datasets. The GCP mapping is introductory BigQuery exposure, not all Google Cloud services."
+  },
+  {
+    "resource_id": "aws-athena-s3-query-lab",
+    "title": "AWS: Query S3 Sample Data with Amazon Athena",
+    "resource_type": "tutorial",
+    "skill_ids": [
+      "aws",
+      "sql"
+    ],
+    "level": "intermediate",
+    "eligibility_note": "Requires an AWS account, appropriate permissions and an S3 query-results bucket. AWS explicitly states that tutorial queries incur charges; storage may also cost money. Not a default free exercise. Check costs and remove chargeable resources after use.",
+    "source_url": "https://docs.aws.amazon.com/athena/latest/ug/getting-started.html",
+    "verified_at": "2026-10-28T01:58:14Z",
+    "mapping_evidence": "The AWS tutorial creates a database and table over sample S3 data, executes Athena queries and checks results. The AWS mapping is limited to this introductory workflow."
+  },
+  {
+    "resource_id": "azure-sql-database-lab",
+    "title": "Microsoft Learn Lab: Explore Azure SQL Database",
+    "resource_type": "tutorial",
+    "skill_ids": [
+      "azure",
+      "sql"
+    ],
+    "level": "intermediate",
+    "eligibility_note": "Requires an Azure subscription with administrative-level access. Subscription charges may apply; verify the selected configuration and delete the lab resource group afterward. No free sandbox or university subscription is promised.",
+    "source_url": "https://microsoftlearning.github.io/DP-900T00A-Azure-Data-Fundamentals/Instructions/Labs/dp900-01-sql-lab.html",
+    "verified_at": "2026-10-28T01:58:14Z",
+    "mapping_evidence": "The official DP-900 lab provisions and explores Azure SQL Database and executes SQL against sample relational data."
+  },
+  {
+    "resource_id": "snowflake-getting-started-lab",
+    "title": "Snowflake: Load Data and Run Analytical Queries",
+    "resource_type": "tutorial",
+    "skill_ids": [
+      "snowflake",
+      "sql"
+    ],
+    "level": "intermediate",
+    "eligibility_note": "Requires basic SQL and database concepts plus familiarity with CSV and JSON. The guide uses a time-limited Snowflake trial; verify current credit and billing conditions. Trial access is not permanent free access. Suspend compute and clean up resources after practice.",
+    "source_url": "https://www.snowflake.com/en/developers/guides/getting-started-with-snowflake/",
+    "verified_at": "2026-10-28T01:58:14Z",
+    "mapping_evidence": "The lab creates warehouses and database objects, loads structured and semi-structured data, and runs analytical queries including joins."
+  },
+  {
+    "resource_id": "python-official-tutorial",
+    "title": "The Python Tutorial",
+    "resource_type": "tutorial",
+    "skill_ids": [
+      "python"
+    ],
+    "level": "beginner",
+    "eligibility_note": "Public tutorial for programmers who are new to Python; it assumes a basic understanding of programming and is not aimed at people new to programming. Running examples requires Python.",
+    "source_url": "https://docs.python.org/3/tutorial/",
+    "verified_at": "2026-10-28T00:12:11Z",
+    "mapping_evidence": "The tutorial introduces the basic concepts and features of the Python language."
+  },
+  {
+    "resource_id": "pandas-ten-minutes",
+    "title": "10 minutes to pandas",
+    "resource_type": "tutorial",
+    "skill_ids": [
+      "pandas"
+    ],
+    "level": "beginner",
+    "eligibility_note": "Public documentation; hands-on examples require pandas and its dependencies.",
+    "source_url": "https://pandas.pydata.org/docs/user_guide/10min.html",
+    "verified_at": "2026-10-28T00:12:11Z",
+    "mapping_evidence": "The guide demonstrates pandas Series and DataFrame structures and basic operations."
+  },
+  {
+    "resource_id": "numpy-absolute-beginners",
+    "title": "NumPy: The Absolute Basics for Beginners",
+    "resource_type": "tutorial",
+    "skill_ids": [
+      "numpy"
+    ],
+    "level": "beginner",
+    "eligibility_note": "Public documentation; running the examples requires NumPy.",
+    "source_url": "https://numpy.org/doc/stable/user/absolute_beginners.html",
+    "verified_at": "2026-10-28T00:12:11Z",
+    "mapping_evidence": "The official guide teaches NumPy arrays and operations on its ndarray data structures."
+  },
+  {
+    "resource_id": "matplotlib-pyplot-tutorial",
+    "title": "Pyplot Tutorial",
+    "resource_type": "tutorial",
+    "skill_ids": [
+      "matplotlib"
+    ],
+    "level": "beginner",
+    "eligibility_note": "Public documentation; running the examples requires Python and Matplotlib.",
+    "source_url": "https://matplotlib.org/stable/tutorials/pyplot.html",
+    "verified_at": "2026-10-28T00:12:11Z",
+    "mapping_evidence": "The tutorial introduces matplotlib.pyplot functions for creating and formatting plots."
+  },
+  {
+    "resource_id": "r-introduction-cran",
+    "title": "An Introduction to R",
+    "resource_type": "documentation",
+    "skill_ids": [
+      "r"
+    ],
+    "level": "beginner",
+    "eligibility_note": "Public manual; hands-on practice requires an R installation.",
+    "source_url": "https://cran.r-project.org/doc/manuals/r-release/R-intro.html",
+    "verified_at": "2026-10-28T00:12:11Z",
+    "mapping_evidence": "The manual introduces R as a language and environment for statistical computing and graphics."
+  },
+  {
+    "resource_id": "scikit-learn-getting-started",
+    "title": "Getting Started",
+    "resource_type": "tutorial",
+    "skill_ids": [
+      "scikit_learn"
+    ],
+    "level": "intermediate",
+    "eligibility_note": "Public documentation; examples require Python and scikit-learn.",
+    "source_url": "https://scikit-learn.org/stable/getting_started.html",
+    "verified_at": "2026-10-28T00:12:11Z",
+    "mapping_evidence": "The guide demonstrates scikit-learn estimators, fitting and prediction, and covers preprocessing, model selection, and evaluation."
+  },
+  {
+    "resource_id": "postgresql-tutorial",
+    "title": "PostgreSQL Tutorial",
+    "resource_type": "tutorial",
+    "skill_ids": [
+      "sql"
+    ],
+    "level": "beginner",
+    "eligibility_note": "Public tutorial; hands-on practice requires a PostgreSQL installation.",
+    "source_url": "https://www.postgresql.org/docs/current/tutorial.html",
+    "verified_at": "2026-10-28T00:12:11Z",
+    "mapping_evidence": "The tutorial explicitly introduces PostgreSQL, relational database concepts, and the SQL language."
+  },
+  {
+    "resource_id": "sqlite-sql-language",
+    "title": "SQL As Understood By SQLite",
+    "resource_type": "documentation",
+    "skill_ids": [
+      "sql"
+    ],
+    "level": "intermediate",
+    "eligibility_note": "Public SQL language reference; hands-on practice requires SQLite.",
+    "source_url": "https://www.sqlite.org/lang.html",
+    "verified_at": "2026-10-28T00:12:11Z",
+    "mapping_evidence": "The SQLite reference documents supported SQL statements, syntax, and language features."
+  },
+  {
+    "resource_id": "power-bi-desktop-getting-started",
+    "title": "Power BI: Build a Financial Sample Report from Start to Finish",
+    "resource_type": "tutorial",
+    "skill_ids": [
+      "power_bi"
+    ],
+    "level": "beginner",
+    "eligibility_note": "Requires Power BI Desktop on a supported computer and basic familiarity with Excel and the Desktop interface. Local report creation and saving are sufficient; publishing requires a Power BI account and separate service access.",
+    "source_url": "https://learn.microsoft.com/en-us/power-bi/create-reports/desktop-excel-stunning-report",
+    "verified_at": "2026-10-28T01:58:14Z",
+    "mapping_evidence": "The tutorial transforms the financial sample, builds a data model and measures, and creates report visuals and a slicer."
+  },
+  {
+    "resource_id": "excel-help-learning",
+    "title": "Microsoft Excel: Create and Explore a PivotTable",
+    "resource_type": "tutorial",
+    "skill_ids": [
+      "excel"
+    ],
+    "level": "beginner",
+    "eligibility_note": "Public instructions; practice requires access to an Excel version supporting the described features. Use sample data. This is a guided tool exercise, not a certification or free Excel license.",
+    "source_url": "https://support.microsoft.com/en-us/excel/get-started/create-a-pivottable-to-analyze-worksheet-data",
+    "verified_at": "2026-10-28T01:58:14Z",
+    "mapping_evidence": "The official guide demonstrates creating a PivotTable to summarize and analyze worksheet data."
+  },
+  {
+    "resource_id": "pro-git-book",
+    "title": "Pro Git",
+    "resource_type": "documentation",
+    "skill_ids": [
+      "git"
+    ],
+    "level": "beginner",
+    "eligibility_note": "The book is publicly readable online.",
+    "source_url": "https://git-scm.com/book/en/v2",
+    "verified_at": "2026-10-28T00:12:11Z",
+    "mapping_evidence": "The book covers Git installation and setup, repositories, recording changes, history, and branching."
+  },
+  {
+    "resource_id": "github-hello-world",
+    "title": "Hello World",
+    "resource_type": "tutorial",
+    "skill_ids": [
+      "git"
+    ],
+    "level": "beginner",
+    "eligibility_note": "A GitHub account is required. This teaches the GitHub repository and pull-request workflow, not a standalone command-line Git course.",
+    "source_url": "https://docs.github.com/en/get-started/using-github/hello-world",
+    "verified_at": "2026-10-28T00:12:11Z",
+    "mapping_evidence": "This tutorial teaches GitHub essentials like repositories, branches, commits, and pull requests."
+  },
+  {
+    "resource_id": "pytorch-learn-the-basics",
+    "title": "Learn the Basics",
+    "resource_type": "tutorial",
+    "skill_ids": [
+      "pytorch"
+    ],
+    "level": "beginner",
+    "eligibility_note": "Assumes basic familiarity with Python and deep-learning concepts. Public tutorial; run the code in Google Colab or install PyTorch and TorchVision locally.",
+    "source_url": "https://docs.pytorch.org/tutorials/beginner/basics/intro.html",
+    "verified_at": "2026-10-28T00:12:11Z",
+    "mapping_evidence": "The tutorial implements a machine-learning workflow using PyTorch, including data loading, model creation, optimization, and saving."
+  },
+  {
+    "resource_id": "spark-quick-start",
+    "title": "Quick Start",
+    "resource_type": "tutorial",
+    "skill_ids": [
+      "spark"
+    ],
+    "level": "beginner",
+    "eligibility_note": "Public tutorial; following along requires installing a packaged Spark release or PySpark.",
+    "source_url": "https://spark.apache.org/docs/latest/quick-start.html",
+    "verified_at": "2026-10-28T00:12:11Z",
+    "mapping_evidence": "The official quick start introduces Spark APIs in Python and Scala and demonstrates DataFrame-based analysis."
+  },
+  {
+    "resource_id": "tensorflow-beginner-quickstart",
+    "title": "TensorFlow 2 Quickstart for Beginners",
+    "resource_type": "tutorial",
+    "skill_ids": [
+      "tensorflow"
+    ],
+    "level": "beginner",
+    "eligibility_note": "Public tutorial; the page supports running its notebook in Google Colab or using a local Python environment.",
+    "source_url": "https://www.tensorflow.org/tutorials/quickstart/beginner",
+    "verified_at": "2026-10-28T00:12:11Z",
+    "mapping_evidence": "The tutorial imports TensorFlow and uses it to train and evaluate a neural-network image classifier."
+  }
+]

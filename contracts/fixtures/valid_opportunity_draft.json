@@ -9,6 +9,10 @@
     "source_post_id": "example_post",
     "source_post_ids": ["example_post"],
     "description": "Synthetic fixture event.",
+    "responsibilities": null,
+    "time_commitment": null,
+    "compensation_status": "not_stated",
+    "ccr_status": "not_stated",
     "activity_type_ids": ["workshop"],
     "topic_ids": ["data_ai"],
     "skill_ids": ["python"],
@@ -48,7 +52,12 @@
       "rule_id": "activity.workshop.keyword"
     }
   ],
-  "missing_fields": ["start_date", "registration_url"],
+  "missing_fields": [
+    "start_date",
+    "registration_url",
+    "responsibilities",
+    "time_commitment"
+  ],
   "conflicts": [],
   "exclusion_reason": null,
   "created_at": "2026-10-26T12:06:00Z"

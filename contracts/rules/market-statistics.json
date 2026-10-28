@@ -1,0 +1,29 @@
+{
+  "rule_set_version": "1.0.0",
+  "reference_implementation": "src.market_export.calculate_market_statistics",
+  "eligibility": {
+    "require_classified_primary_role": true,
+    "require_classified_core_career_level": true,
+    "exclude_needs_review_and_outside_scope": true
+  },
+  "filters": {
+    "dimensions": ["role_id", "career_level", "market_area", "posted_date"],
+    "multi_select_within_dimension": "OR",
+    "combine_dimensions": "AND",
+    "date_bounds": "inclusive",
+    "unknown_posted_date_with_date_filter": "exclude",
+    "empty_selector": "no_filter"
+  },
+  "counts": {
+    "job_count": "Number of eligible postings after all active filters.",
+    "analyzable_description_count": "Filtered postings where description_analyzable is true.",
+    "mention_count": "Unique eligible postings with the skill in either skill array and an analyzable description.",
+    "mention_rate": "mention_count divided by analyzable_description_count; null when the denominator is zero."
+  },
+  "skill_handling": {
+    "deduplicate_ids_within_posting_across_arrays": true,
+    "skill_ids_select_reported_metrics_not_posting_filters": true,
+    "empty_skill_selection": "all ids present in the filtered sample",
+    "skill_id_order": "ascending"
+  }
+}

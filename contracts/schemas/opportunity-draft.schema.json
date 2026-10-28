@@ -19,7 +19,8 @@
             "enum": [
               "kind", "title", "description", "organizer_id", "start_at", "end_at", "deadline_at",
               "start_date", "end_date", "deadline_date", "location", "format", "eligibility_note",
-              "registration_url", "activity_type_ids", "topic_ids", "skill_ids", "beginner_level"
+              "registration_url", "responsibilities", "time_commitment", "compensation_status",
+              "ccr_status", "activity_type_ids", "topic_ids", "skill_ids", "beginner_level"
             ]
           },
           "candidate_value": {

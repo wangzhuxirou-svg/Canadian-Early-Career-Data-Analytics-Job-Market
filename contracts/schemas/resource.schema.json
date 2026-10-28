@@ -19,6 +19,10 @@
     "level": { "type": "string", "enum": ["beginner", "intermediate", "advanced", "unknown"] },
     "eligibility_note": { "type": ["string", "null"] },
     "source_url": { "type": "string", "format": "uri" },
-    "verified_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/utcDateTime" }
+    "verified_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/utcDateTime" },
+    "mapping_evidence": {
+      "type": ["string", "null"],
+      "minLength": 1
+    }
   }
 }
