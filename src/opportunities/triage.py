@@ -99,18 +99,11 @@ def assess(draft: dict, raw: dict, data_dir: Path = DATA_DIR,
     if opportunity_relevance(text, False) == "exclude" and not meeting_heading:
         decision.update(decision="excluded", reasons=["no_actionable_opportunity"])
         return decision
-    for key in ("deadline", "end", "start"):
-        # An event with a known end can still be running after its start day.
-        if key == "start" and opportunity.get("end_date"):
-            continue
-        exact = opportunity.get(f"{key}_at")
-        day = opportunity.get(f"{key}_date")
-        if exact and key != "start" and datetime.fromisoformat(exact.replace("Z", "+00:00")) < now:
-            decision.update(decision="excluded", reasons=[f"expired_{key}"])
-            return decision
-        if (not exact or key == "start") and day and day < today.isoformat():
-            decision.update(decision="excluded", reasons=[f"expired_{key}"])
-            return decision
+    from src.opportunities.temporal import expiration_reason
+    expired = expiration_reason(opportunity, now)
+    if expired:
+        decision.update(decision="excluded", reasons=[expired])
+        return decision
     if not source_is_current(data_dir, opportunity):
         reasons.append("source_version_not_current")
     version_path = data_dir / "draft_versions" / f"{raw['source_post_id']}.json"

@@ -75,3 +75,24 @@ def relative_deadline(text: str, posted_at: str | None):
     if match:
         return (anchor + timedelta(days=int(match.group(1)))).isoformat()
     return None
+
+
+def expiration_reason(opportunity: dict, now: datetime | None = None) -> str | None:
+    """Shared D6/D7 expiry policy; date-only values last through Toronto midnight."""
+    now = now or datetime.now(timezone.utc)
+    today = now.astimezone(ZoneInfo("America/Toronto")).date().isoformat()
+    for key in ("deadline", "end", "start"):
+        if key == "start" and (opportunity.get("end_date") or opportunity.get("end_at")):
+            continue
+        exact = opportunity.get(f"{key}_at")
+        day = opportunity.get(f"{key}_date")
+        if exact:
+            instant = datetime.fromisoformat(exact.replace("Z", "+00:00"))
+            if key != "start":
+                if instant <= now:
+                    return f"expired_{key}"
+                continue
+            day = instant.astimezone(ZoneInfo("America/Toronto")).date().isoformat()
+        if day and day < today:
+            return f"expired_{key}"
+    return None

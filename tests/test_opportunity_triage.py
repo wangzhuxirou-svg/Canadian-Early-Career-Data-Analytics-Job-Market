@@ -118,7 +118,7 @@ def test_default_manual_queue_omits_automatic_candidates_but_supports_spot_check
     # Freeze policy time so this test is independent of wall-clock expiry.
     import src.opportunities.triage as triage
     original = triage.assess
-    monkeypatch.setattr(triage, "assess", lambda draft, raw, directory: original(draft, raw, directory, NOW))
+    monkeypatch.setattr(triage, "assess", lambda draft, raw, directory, now=None: original(draft, raw, directory, NOW))
     assert review._load_reviewable_drafts() == []
     assert len(review._load_reviewable_drafts(include_auto=True)) == 1
     assert review.effective_publishable_opportunity(draft)["eligibility"]["decision"] == "auto_candidate"
