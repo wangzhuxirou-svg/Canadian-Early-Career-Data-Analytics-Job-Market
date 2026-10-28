@@ -16,7 +16,7 @@
     "sample_count"
   ],
   "properties": {
-    "schema_version": { "const": "1.0.0" },
+    "schema_version": { "const": "1.1.0" },
     "dataset_version": {
       "type": "string",
       "minLength": 1,

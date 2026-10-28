@@ -5,11 +5,14 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 from referencing import Registry, Resource
+from src.market_export import export_market_bundle, to_market_job
+from config.settings import SOFT_SKILL_KEYWORDS, TECHNICAL_SKILLS_KEYWORDS
 
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMAS_DIR = ROOT / "contracts" / "schemas"
 FIXTURES_DIR = ROOT / "contracts" / "fixtures"
+RESOURCES_DIR = ROOT / "resources"
 
 
 def load_json(path: Path):
@@ -68,6 +71,119 @@ def test_bundle_fixtures_match_contract(fixture_name, schemas_and_registry):
     assert bundle["manifest"]["sample_count"] == len(bundle["market_jobs"])
 
 
+@pytest.mark.parametrize(
+    ("filename", "schema_name", "id_field", "skill_field"),
+    [
+        ("courses.json", "course", "course_id", "candidate_skill_ids"),
+        ("learning_resources.json", "resource", "resource_id", "skill_ids"),
+    ],
+)
+def test_d5_reference_files_match_contract_and_catalog(
+    filename, schema_name, id_field, skill_field, schemas_and_registry
+):
+    schemas, registry = schemas_and_registry
+    records = load_json(RESOURCES_DIR / filename)
+    valid_skills = set(TECHNICAL_SKILLS_KEYWORDS) | set(SOFT_SKILL_KEYWORDS)
+    ids = [record[id_field] for record in records]
+
+    assert len(ids) == len(set(ids))
+    for record in records:
+        validate(record, schemas[schema_name], registry)
+        assert set(record[skill_field]) <= valid_skills
+        if schema_name == "resource" and record[skill_field]:
+            assert record.get("mapping_evidence")
+
+
+def test_market_package_includes_d5_references_and_their_skills(tmp_path):
+    package_dir = export_market_bundle(
+        [{
+            "job_id": "d5-package-job",
+            "source": "jsearch",
+            "job_title": "Data Analyst Intern",
+            "classified_role_family": "data_analyst",
+            "role_status": "target",
+            "classified_career_level": "internship",
+            "market_area": "unknown",
+            "collected_at_utc": "2026-10-11T12:00:00Z",
+            "job_description": None,
+            "technical_skills": ["python"],
+            "soft_skills": [],
+        }],
+        tmp_path / "package",
+        dataset_version="1.0.1",
+        query_config_version="jsearch-role-career-matrix-v1",
+    )
+    bundle = load_json(package_dir / "bundle.json")
+    skills = {skill["skill_id"] for skill in bundle["skills"]}
+
+    assert bundle["courses"] == load_json(RESOURCES_DIR / "courses.json")
+    assert bundle["resources"] == load_json(RESOURCES_DIR / "learning_resources.json")
+    assert "r" in skills
+    assert (package_dir / "courses.json").exists()
+    assert (package_dir / "learning_resources.json").exists()
+
+
+def test_resource_mapping_evidence_is_optional_for_existing_records(schemas_and_registry):
+    schemas, registry = schemas_and_registry
+    bundle = load_json(FIXTURES_DIR / "valid_bundle.json")
+    resource = copy.deepcopy(bundle["resources"][0])
+    assert resource["mapping_evidence"]
+    validate(resource, schemas["resource"], registry)
+
+    resource.pop("mapping_evidence")
+    validate(resource, schemas["resource"], registry)
+
+    resource["mapping_evidence"] = None
+    validate(resource, schemas["resource"], registry)
+
+    resource["mapping_evidence"] = ""
+    with pytest.raises(ValidationError):
+        validate(resource, schemas["resource"], registry)
+
+
+def test_market_statistics_golden_fixture_matches_contracts(schemas_and_registry):
+    schemas, registry = schemas_and_registry
+    fixture = load_json(FIXTURES_DIR / "market_statistics_cases.json")
+    for job in fixture["market_jobs"]:
+        validate(job, schemas["market-job"], registry)
+    for case in fixture["cases"]:
+        validate(case["expected"], schemas["market-statistics"], registry)
+
+
+def test_python_market_export_emits_a_contract_valid_job(schemas_and_registry):
+    schemas, registry = schemas_and_registry
+    job = to_market_job({
+        "job_id": "contract-export-1",
+        "job_title": "Data Analyst Intern",
+        "classified_role_family": "data_analyst",
+        "role_status": "target",
+        "classified_career_level": "internship",
+        "market_area": "Toronto GTA",
+        "job_posted_at_datetime_utc": "2026-10-10T12:00:00Z",
+        "collected_at_utc": "2026-10-11T12:00:00Z",
+        "job_description": None,
+        "technical_skills": ["python"],
+        "soft_skills": [],
+    })
+    validate(job, schemas["market-job"], registry)
+
+
+def test_course_skill_mapping_examples_are_explicit_review_candidates():
+    rules = load_json(ROOT / "contracts" / "rules" / "course-skill-mapping.json")
+    fixture = load_json(FIXTURES_DIR / "course-skill-mapping-cases.json")
+    bundle = load_json(FIXTURES_DIR / "valid_bundle.json")
+    skill_ids = {skill["skill_id"] for skill in bundle["skills"]}
+    assert rules["evidence"]["human_review_required_before_publication"] is True
+    assert rules["evidence"]["do_not_infer_from_course_title_alone"] is True
+    assert all(case["source_type"] == "official_calendar_excerpt" for case in fixture["cases"])
+    assert fixture["cases"][1]["expected_candidate_skill_ids"] == []
+    assert {
+        skill_id
+        for case in fixture["cases"]
+        for skill_id in case["expected_candidate_skill_ids"]
+    } <= skill_ids
+
+
 def test_bundle_rejects_bad_classification_dates_and_missing_descriptions(schemas_and_registry):
     schemas, registry = schemas_and_registry
     bundle = load_json(FIXTURES_DIR / "invalid_bundle.json")
@@ -94,6 +210,23 @@ def test_bundle_only_allows_approved_opportunities(schemas_and_registry):
     bundle["opportunities"][0]["review_status"] = "needs_review"
     with pytest.raises(ValidationError):
         validate(bundle, schemas["bundle"], registry)
+
+
+def test_bundle_opportunity_organizers_are_resolvable():
+    bundle = load_json(FIXTURES_DIR / "valid_bundle.json")
+    organizer_id_list = [organizer["organizer_id"] for organizer in bundle["organizers"]]
+    organizer_ids = set(organizer_id_list)
+    assert len(organizer_ids) == len(organizer_id_list)
+    assert {opportunity["organizer_id"] for opportunity in bundle["opportunities"]} <= organizer_ids
+
+
+def test_opportunity_rejects_unsupported_compensation_and_ccr_statuses(schemas_and_registry):
+    schemas, registry = schemas_and_registry
+    for field in ("compensation_status", "ccr_status"):
+        bundle = copy.deepcopy(load_json(FIXTURES_DIR / "valid_bundle.json"))
+        bundle["opportunities"][0][field] = "unknown"
+        with pytest.raises(ValidationError):
+            validate(bundle, schemas["bundle"], registry)
 
 
 def test_fixture_skill_references_are_resolvable():
