@@ -1,0 +1,166 @@
+{
+  "fixture_status": "synthetic_reference_only",
+  "market_jobs": [
+    {
+      "job_key": "jsearch:sample-1",
+      "source": "jsearch",
+      "source_job_id": "sample-1",
+      "job_title": "Data Analyst Intern",
+      "employer_name": "Example One",
+      "source_url": null,
+      "role_id": "data_analyst",
+      "role_subtype": null,
+      "role_classification_status": "classified",
+      "role_classification_label": null,
+      "classification_reasons": [],
+      "career_level": "internship",
+      "career_level_status": "classified",
+      "market_area": "toronto_gta",
+      "posted_at": "2026-10-10T12:00:00Z",
+      "posted_date": "2026-10-10",
+      "posted_precision": "datetime",
+      "source_timezone": "America/Toronto",
+      "first_seen_at": "2026-10-10T14:00:00Z",
+      "last_seen_at": "2026-10-10T14:00:00Z",
+      "technical_skill_ids": ["python", "sql"],
+      "soft_skill_ids": ["teamwork"],
+      "description_status": "available",
+      "description_analyzable": true
+    },
+    {
+      "job_key": "jsearch:sample-2",
+      "source": "jsearch",
+      "source_job_id": "sample-2",
+      "job_title": "Business Analyst",
+      "employer_name": "Example Two",
+      "source_url": null,
+      "role_id": "business_analyst",
+      "role_subtype": null,
+      "role_classification_status": "classified",
+      "role_classification_label": null,
+      "classification_reasons": [],
+      "career_level": "entry_level",
+      "career_level_status": "classified",
+      "market_area": "montreal_metro",
+      "posted_at": "2026-10-11T12:00:00Z",
+      "posted_date": "2026-10-11",
+      "posted_precision": "datetime",
+      "source_timezone": "America/Toronto",
+      "first_seen_at": "2026-10-11T14:00:00Z",
+      "last_seen_at": "2026-10-11T14:00:00Z",
+      "technical_skill_ids": ["sql", "excel"],
+      "soft_skill_ids": [],
+      "description_status": "missing",
+      "description_analyzable": false
+    },
+    {
+      "job_key": "jsearch:sample-3",
+      "source": "jsearch",
+      "source_job_id": "sample-3",
+      "job_title": "Data Analyst",
+      "employer_name": "Example Three",
+      "source_url": null,
+      "role_id": "data_analyst",
+      "role_subtype": null,
+      "role_classification_status": "classified",
+      "role_classification_label": null,
+      "classification_reasons": [],
+      "career_level": "entry_level",
+      "career_level_status": "classified",
+      "market_area": "toronto_gta",
+      "posted_at": "2026-10-12T12:00:00Z",
+      "posted_date": "2026-10-12",
+      "posted_precision": "datetime",
+      "source_timezone": "America/Toronto",
+      "first_seen_at": "2026-10-12T14:00:00Z",
+      "last_seen_at": "2026-10-12T14:00:00Z",
+      "technical_skill_ids": ["python", "sql"],
+      "soft_skill_ids": ["python"],
+      "description_status": "available",
+      "description_analyzable": true
+    },
+    {
+      "job_key": "jsearch:sample-4",
+      "source": "jsearch",
+      "source_job_id": "sample-4",
+      "job_title": "Risk Analyst",
+      "employer_name": "Example Four",
+      "source_url": null,
+      "role_id": "financial_risk_analyst",
+      "role_subtype": "risk_analysis",
+      "role_classification_status": "classified",
+      "role_classification_label": null,
+      "classification_reasons": [],
+      "career_level": "new_grad",
+      "career_level_status": "classified",
+      "market_area": "other_canada",
+      "posted_at": "2026-09-30T12:00:00Z",
+      "posted_date": "2026-09-30",
+      "posted_precision": "datetime",
+      "source_timezone": "America/Toronto",
+      "first_seen_at": "2026-09-30T14:00:00Z",
+      "last_seen_at": "2026-09-30T14:00:00Z",
+      "technical_skill_ids": [],
+      "soft_skill_ids": [],
+      "description_status": "unavailable",
+      "description_analyzable": false
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "all-eligible-jobs",
+      "filters": {},
+      "skill_ids": ["python", "sql", "excel", "teamwork", "risk"],
+      "expected": {
+        "job_count": 4,
+        "analyzable_description_count": 2,
+        "skills": [
+          { "skill_id": "excel", "mention_count": 0, "mention_rate": 0.0 },
+          { "skill_id": "python", "mention_count": 2, "mention_rate": 1.0 },
+          { "skill_id": "risk", "mention_count": 0, "mention_rate": 0.0 },
+          { "skill_id": "sql", "mention_count": 2, "mention_rate": 1.0 },
+          { "skill_id": "teamwork", "mention_count": 1, "mention_rate": 0.5 }
+        ]
+      }
+    },
+    {
+      "case_id": "combined-role-stage-area-date-filters",
+      "filters": {
+        "role_ids": ["data_analyst", "business_analyst"],
+        "career_levels": ["internship", "entry_level"],
+        "market_areas": ["toronto_gta", "montreal_metro"],
+        "posted_from": "2026-10-10",
+        "posted_to": "2026-10-12"
+      },
+      "skill_ids": ["python", "sql", "excel"],
+      "expected": {
+        "job_count": 3,
+        "analyzable_description_count": 2,
+        "skills": [
+          { "skill_id": "excel", "mention_count": 0, "mention_rate": 0.0 },
+          { "skill_id": "python", "mention_count": 2, "mention_rate": 1.0 },
+          { "skill_id": "sql", "mention_count": 2, "mention_rate": 1.0 }
+        ]
+      }
+    },
+    {
+      "case_id": "empty-sample",
+      "filters": {
+        "role_ids": ["financial_risk_analyst"],
+        "career_levels": ["internship"],
+        "market_areas": ["toronto_gta"],
+        "posted_from": "2026-10-01",
+        "posted_to": "2026-10-31"
+      },
+      "skill_ids": ["python", "sql"],
+      "expected": {
+        "job_count": 0,
+        "analyzable_description_count": 0,
+        "skills": [
+          { "skill_id": "python", "mention_count": 0, "mention_rate": null },
+          { "skill_id": "sql", "mention_count": 0, "mention_rate": null }
+        ]
+      }
+    }
+  ]
+}

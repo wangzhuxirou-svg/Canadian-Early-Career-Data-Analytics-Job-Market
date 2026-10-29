@@ -1,6 +1,6 @@
 {
   "manifest": {
-    "schema_version": "1.0.0",
+    "schema_version": "1.1.0",
     "dataset_version": "1.0.0",
     "generated_at": "2026-10-26T16:00:00Z",
     "collected_from": "2026-10-19T08:00:00Z",
@@ -71,6 +71,17 @@
       "aliases": ["PowerBI"]
     }
   ],
+  "organizers": [
+    {
+      "organizer_id": "example_club",
+      "name": "Example Club",
+      "username": "example_club",
+      "profile_url": "https://www.instagram.com/example_club/",
+      "enabled": true,
+      "priority": 1,
+      "last_verified_at": null
+    }
+  ],
   "courses": [
     {
       "course_id": "demo_course",
@@ -92,7 +103,8 @@
       "level": "beginner",
       "eligibility_note": null,
       "source_url": "https://learn.example/sql",
-      "verified_at": "2026-10-26T16:00:00Z"
+      "verified_at": "2026-10-26T16:00:00Z",
+      "mapping_evidence": "Synthetic fixture only; official evidence must be verified before use."
     }
   ],
   "opportunities": [
@@ -105,6 +117,10 @@
       "source_post_id": "example_post",
       "source_post_ids": ["example_post"],
       "description": "Synthetic fixture event; not a real UTSC opportunity.",
+      "responsibilities": "Synthetic example responsibilities.",
+      "time_commitment": "Two hours",
+      "compensation_status": "not_stated",
+      "ccr_status": "not_stated",
       "activity_type_ids": ["workshop"],
       "topic_ids": ["data_ai"],
       "skill_ids": ["python"],

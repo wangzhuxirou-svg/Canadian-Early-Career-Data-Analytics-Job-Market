@@ -7,6 +7,7 @@ def make_features() -> pd.DataFrame:
     return pd.DataFrame({
         'job_id': ['job-1', 'job-2'],
         'classified_role_family': ['data_analyst', 'outside_scope'],
+        'classified_role_subtype': [None, None],
         'classified_career_level': ['internship', 'unknown'],
         'technical_skills': [['python'], []],
         'soft_skills': [[], ['communication']],
@@ -45,4 +46,15 @@ def test_duplicate_job_ids_fail():
     features = make_features()
     features.loc[1, 'job_id'] = 'job-1'
     with pytest.raises(ValueError, match='Duplicate job IDs'):
+        validate_features(features)
+
+
+def test_financial_risk_subtype_is_required_and_constrained():
+    features = make_features()
+    features.loc[0, 'classified_role_family'] = 'financial_risk_analyst'
+    features.loc[0, 'classified_role_subtype'] = 'financial_analysis'
+    validate_features(features)
+
+    features.loc[0, 'classified_role_subtype'] = 'finance'
+    with pytest.raises(ValueError, match='Invalid role subtypes'):
         validate_features(features)

@@ -1,0 +1,29 @@
+{
+  "fixture_status": "synthetic_rule_examples_not_verified_course_data",
+  "cases": [
+    {
+      "case_id": "official-evidence-supports-two-skills",
+      "course_title": "Introduction to Applied Analytics",
+      "source_type": "official_calendar_excerpt",
+      "evidence_text": "Course assignments use Python for data analysis and SQL to query relational databases.",
+      "expected_candidate_skill_ids": ["python", "sql"],
+      "review_note": "Candidates cite exact official wording; this does not assert completion or proficiency."
+    },
+    {
+      "case_id": "title-alone-does-not-infer-skills",
+      "course_title": "Data Science Foundations",
+      "source_type": "official_calendar_excerpt",
+      "evidence_text": "An introduction to concepts and applications in data science.",
+      "expected_candidate_skill_ids": [],
+      "review_note": "Do not infer Python, statistics, or machine learning from the title."
+    },
+    {
+      "case_id": "aliases-deduplicate-to-canonical-skill",
+      "course_title": "Business Intelligence",
+      "source_type": "official_calendar_excerpt",
+      "evidence_text": "Labs use Microsoft Power BI (PowerBI) to build dashboards.",
+      "expected_candidate_skill_ids": ["power_bi"],
+      "review_note": "Repeated label/alias evidence yields one candidate skill ID."
+    }
+  ]
+}

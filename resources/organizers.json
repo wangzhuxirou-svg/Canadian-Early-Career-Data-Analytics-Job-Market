@@ -1,0 +1,191 @@
+[
+  {
+    "organizer_id": "ds3_utsc",
+    "name": "Data Science & Statistics Society (DS3)",
+    "username": "ds3.utsc",
+    "profile_url": "https://www.instagram.com/ds3.utsc/",
+    "enabled": true,
+    "priority": 1,
+    "last_verified_at": null
+  },
+  {
+    "organizer_id": "create_uoft",
+    "name": "CREATE",
+    "username": "create.uoft",
+    "profile_url": "https://www.instagram.com/create.uoft/",
+    "enabled": true,
+    "priority": 2,
+    "last_verified_at": null
+  },
+  {
+    "organizer_id": "amacss_utsc",
+    "name": "Association of Mathematical and Computer Science Students (AMACSS)",
+    "username": "amacss_utsc",
+    "profile_url": "https://www.instagram.com/amacss_utsc/",
+    "enabled": true,
+    "priority": 3,
+    "last_verified_at": null
+  },
+  {
+    "organizer_id": "csecutsc",
+    "name": "Computer Science Enrichment Club (CSEC)",
+    "username": "csecutsc",
+    "profile_url": "https://www.instagram.com/csecutsc/",
+    "enabled": true,
+    "priority": 4,
+    "last_verified_at": null
+  },
+  {
+    "organizer_id": "utsc_ccc",
+    "name": "UTSC Competitive Coding Club",
+    "username": "utsc_ccc",
+    "profile_url": "https://www.instagram.com/utsc_ccc/",
+    "enabled": true,
+    "priority": 5,
+    "last_verified_at": null
+  },
+  {
+    "organizer_id": "hackthevalley",
+    "name": "Hack the Valley",
+    "username": "hackthevalley",
+    "profile_url": "https://www.instagram.com/hackthevalley/",
+    "enabled": true,
+    "priority": 6,
+    "last_verified_at": null
+  },
+  {
+    "organizer_id": "wicsm_utsc",
+    "name": "Women in Computer Science, Statistics and Mathematics (WiCSM)",
+    "username": "wicsm.utsc",
+    "profile_url": "https://www.instagram.com/wicsm.utsc/",
+    "enabled": true,
+    "priority": 7,
+    "last_verified_at": null
+  },
+  {
+    "organizer_id": "gdgutsc",
+    "name": "Google Developer Group (GDG) UTSC",
+    "username": "gdgutsc",
+    "profile_url": "https://www.instagram.com/gdgutsc/",
+    "enabled": true,
+    "priority": 8,
+    "last_verified_at": null
+  },
+  {
+    "organizer_id": "siinai_utsc",
+    "name": "SIINAI",
+    "username": "siinai_utsc",
+    "profile_url": "https://www.instagram.com/siinai_utsc/",
+    "enabled": true,
+    "priority": 9,
+    "last_verified_at": null
+  },
+  {
+    "organizer_id": "mtautsc",
+    "name": "Management Technology Association (MTA)",
+    "username": "mtautsc",
+    "profile_url": "https://www.instagram.com/mtautsc/",
+    "enabled": true,
+    "priority": 10,
+    "last_verified_at": null
+  },
+  {
+    "organizer_id": "mcg_utsc",
+    "name": "Management Consulting Group (MCG)",
+    "username": "mcg_utsc",
+    "profile_url": "https://www.instagram.com/mcg_utsc/",
+    "enabled": true,
+    "priority": 11,
+    "last_verified_at": null
+  },
+  {
+    "organizer_id": "msc_uoft",
+    "name": "Management Strategy Council (MSC)",
+    "username": "msc.uoft",
+    "profile_url": "https://www.instagram.com/msc.uoft/",
+    "enabled": true,
+    "priority": 12,
+    "last_verified_at": null
+  },
+  {
+    "organizer_id": "the_marketing_group",
+    "name": "The Marketing Group (TMG)",
+    "username": "the.marketing.group",
+    "profile_url": "https://www.instagram.com/the.marketing.group/",
+    "enabled": true,
+    "priority": 13,
+    "last_verified_at": null
+  },
+  {
+    "organizer_id": "eautsc",
+    "name": "Entrepreneurship Association (EA)",
+    "username": "eautsc",
+    "profile_url": "https://www.instagram.com/eautsc/",
+    "enabled": true,
+    "priority": 14,
+    "last_verified_at": null
+  },
+  {
+    "organizer_id": "investment_society",
+    "name": "Investment Society",
+    "username": "investment_society",
+    "profile_url": "https://www.instagram.com/investment_society/",
+    "enabled": true,
+    "priority": 15,
+    "last_verified_at": null
+  },
+  {
+    "organizer_id": "aceutsc",
+    "name": "ACE UTSC（原 DECA UTSC）",
+    "username": "aceutsc",
+    "profile_url": "https://www.instagram.com/aceutsc/",
+    "enabled": true,
+    "priority": 16,
+    "last_verified_at": null
+  },
+  {
+    "organizer_id": "striveconference",
+    "name": "STRIVE Conference",
+    "username": "striveconference",
+    "profile_url": "https://www.instagram.com/striveconference/",
+    "enabled": true,
+    "priority": 17,
+    "last_verified_at": null
+  },
+  {
+    "organizer_id": "mesaatutsc",
+    "name": "Management and Economics Students’ Association (MESA)",
+    "username": "mesaatutsc",
+    "profile_url": "https://www.instagram.com/mesaatutsc/",
+    "enabled": true,
+    "priority": 18,
+    "last_verified_at": null
+  },
+  {
+    "organizer_id": "miba_utsc",
+    "name": "Management and International Business Association (MIBA)",
+    "username": "miba.utsc",
+    "profile_url": "https://www.instagram.com/miba.utsc/",
+    "enabled": true,
+    "priority": 19,
+    "last_verified_at": null
+  },
+  {
+    "organizer_id": "hra_utsc",
+    "name": "Human Resources Alliance (HRA)",
+    "username": "hra.utsc",
+    "profile_url": "https://www.instagram.com/hra.utsc/",
+    "enabled": true,
+    "priority": 20,
+    "last_verified_at": null
+  },
+  {
+    "organizer_id": "wibauoft",
+    "name": "Women in Business Association (WIBA)",
+    "username": "wibauoft",
+    "profile_url": "https://www.instagram.com/wibauoft/",
+    "enabled": true,
+    "priority": 21,
+    "last_verified_at": null
+  }
+]

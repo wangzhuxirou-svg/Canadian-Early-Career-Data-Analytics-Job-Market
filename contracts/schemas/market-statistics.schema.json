@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://utsc.example/contracts/v1/market-statistics.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["job_count", "analyzable_description_count", "skills"],
+  "properties": {
+    "job_count": { "type": "integer", "minimum": 0 },
+    "analyzable_description_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["skill_id", "mention_count", "mention_rate"],
+        "properties": {
+          "skill_id": {
+            "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/skillId"
+          },
+          "mention_count": { "type": "integer", "minimum": 0 },
+          "mention_rate": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "analyzable_description_count": { "const": 0 } } },
+      "then": {
+        "properties": {
+          "skills": {
+            "items": {
+              "properties": {
+                "mention_count": { "const": 0 },
+                "mention_rate": { "type": "null" }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

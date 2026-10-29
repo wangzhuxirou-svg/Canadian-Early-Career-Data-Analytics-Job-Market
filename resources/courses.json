@@ -1,0 +1,152 @@
+[
+  {
+    "course_id": "CSCA08H3",
+    "title": "Introduction to Computer Science I",
+    "official_url": "https://utsc.calendar.utoronto.ca/course/csca08h3",
+    "calendar_year": "2026-2027",
+    "candidate_skill_ids": ["python"],
+    "evidence_text": "Programming in an object-oriented language such as Python.",
+    "verified_at": "2026-10-28T01:36:57Z",
+    "prerequisite_note": "Grade 12 Calculus and Vectors and [one other Grade 12 mathematics course or CTL Math Preparedness course with additional resources for CMS students]."
+  },
+  {
+    "course_id": "CSCA48H3",
+    "title": "Introduction to Computer Science II",
+    "official_url": "https://utsc.calendar.utoronto.ca/course/csca48h3",
+    "calendar_year": "2026-2027",
+    "candidate_skill_ids": [],
+    "evidence_text": "The calendar covers data structures, object-oriented programming, testing, recursion, and program efficiency; it does not name a canonical catalog tool.",
+    "verified_at": "2026-10-28T00:12:11Z",
+    "prerequisite_note": "CSCA08H3"
+  },
+  {
+    "course_id": "CSCB07H3",
+    "title": "Software Design",
+    "official_url": "https://utsc.calendar.utoronto.ca/course/cscb07h3",
+    "calendar_year": "2026-2027",
+    "candidate_skill_ids": [],
+    "evidence_text": "The calendar lists software design, version control, testing, refactoring, and development tools, but does not identify a specific canonical catalog tool.",
+    "verified_at": "2026-10-28T00:12:11Z",
+    "prerequisite_note": "CSCA48H3 and [CGPA of at least 3.5, or enrolment in a CSC Subject POSt, or enrolment in a non-CSC Subject POSt for which this specific course is a program requirement]"
+  },
+  {
+    "course_id": "CSCB20H3",
+    "title": "Introduction to Databases and Web Applications",
+    "official_url": "https://utsc.calendar.utoronto.ca/course/cscb20h3",
+    "calendar_year": "2026-2027",
+    "candidate_skill_ids": [],
+    "evidence_text": "The calendar describes database creation, querying, and updating, but does not name SQL or another canonical catalog tool.",
+    "verified_at": "2026-10-28T00:12:11Z",
+    "prerequisite_note": "Some experience with programming in an imperative language such as Python, Java or C."
+  },
+  {
+    "course_id": "CSCC11H3",
+    "title": "Introduction to Machine Learning and Data Mining",
+    "official_url": "https://utsc.calendar.utoronto.ca/course/cscc11h3",
+    "calendar_year": "2026-2027",
+    "candidate_skill_ids": [],
+    "evidence_text": "The calendar covers machine-learning methods but does not name a canonical catalog library or tool.",
+    "verified_at": "2026-10-28T00:12:11Z",
+    "prerequisite_note": "[MATB23H3 or MATB24H3] and MATB41H3 and STAB52H3 and [CGPA of at least 3.5 or enrolment in a CSC Subject POSt or enrolment in a non-CSC Subject POSt for which this specific course is a program requirement]."
+  },
+  {
+    "course_id": "CSCC43H3",
+    "title": "Introduction to Databases",
+    "official_url": "https://utsc.calendar.utoronto.ca/course/cscc43h3",
+    "calendar_year": "2026-2027",
+    "candidate_skill_ids": ["sql"],
+    "evidence_text": "Querying and updating databases: the SQL query language. Application programming with SQL.",
+    "verified_at": "2026-10-28T01:36:57Z",
+    "prerequisite_note": "CSCB09H3 and CSCB63H3 and [CGPA 3.5 or enrolment in a CSC Subject POSt]"
+  },
+  {
+    "course_id": "STAB22H3",
+    "title": "Statistics I",
+    "official_url": "https://utsc.calendar.utoronto.ca/course/stab22h3",
+    "calendar_year": "2026-2027",
+    "candidate_skill_ids": [],
+    "evidence_text": "The calendar covers descriptive statistics, sampling, confidence intervals, significance tests, correlation, regression, and experimental design; its computer package is unspecified.",
+    "verified_at": "2026-10-28T00:12:11Z",
+    "prerequisite_note": null
+  },
+  {
+    "course_id": "STAB23H3",
+    "title": "Introduction to Statistics for the Social Sciences",
+    "official_url": "https://utsc.calendar.utoronto.ca/course/stab23h3",
+    "calendar_year": "2026-2027",
+    "candidate_skill_ids": [],
+    "evidence_text": "The calendar covers descriptive and inferential statistics, including sampling distributions, significance tests, and simple linear regression; no catalog tool is named.",
+    "verified_at": "2026-10-28T00:12:11Z",
+    "prerequisite_note": null
+  },
+  {
+    "course_id": "STAB52H3",
+    "title": "An Introduction to Probability",
+    "official_url": "https://utsc.calendar.utoronto.ca/course/stab52h3",
+    "calendar_year": "2026-2027",
+    "candidate_skill_ids": [],
+    "evidence_text": "The calendar covers probability, distributions, simulation, and Monte Carlo methods; the computer package is unspecified.",
+    "verified_at": "2026-10-28T00:12:11Z",
+    "prerequisite_note": "MATA22H3 and MATA37H3"
+  },
+  {
+    "course_id": "STAC32H3",
+    "title": "Applications of Statistical Methods",
+    "official_url": "https://utsc.calendar.utoronto.ca/course/stac32h3",
+    "calendar_year": "2026-2027",
+    "candidate_skill_ids": ["r"],
+    "evidence_text": "Statistical software, such as SAS and R, will be taught and used for all statistical analyses. The source lists SAS or R, so the R candidate is conditional on the course's software choice.",
+    "verified_at": "2026-10-28T01:36:57Z",
+    "prerequisite_note": "STAB27H3 or MGEB12H3 or PSYB06H3 or PSYC08H3 or STA221H1"
+  },
+  {
+    "course_id": "STAC33H3",
+    "title": "Introduction to Applied Statistics",
+    "official_url": "https://utsc.calendar.utoronto.ca/course/stac33h3",
+    "calendar_year": "2026-2027",
+    "candidate_skill_ids": ["r"],
+    "evidence_text": "This course introduces students to statistical software, such as R and SAS, and its use in analyzing data.",
+    "verified_at": "2026-10-28T01:36:57Z",
+    "prerequisite_note": "STAB57H3 or STA248H3 or STA261H3"
+  },
+  {
+    "course_id": "STAC50H3",
+    "title": "Data Collection",
+    "official_url": "https://utsc.calendar.utoronto.ca/course/stac50h3",
+    "calendar_year": "2026-2027",
+    "candidate_skill_ids": ["r"],
+    "evidence_text": "Statistical analyses using SAS or R.",
+    "verified_at": "2026-10-28T01:36:57Z",
+    "prerequisite_note": "STAB57H3 or STA261H1. Students enrolled in the Minor program in Applied Statistics should take STAC53H3."
+  },
+  {
+    "course_id": "STAC53H3",
+    "title": "Applied Data Collection",
+    "official_url": "https://utsc.calendar.utoronto.ca/course/stac53h3",
+    "calendar_year": "2026-2027",
+    "candidate_skill_ids": ["r"],
+    "evidence_text": "The R statistical software package is used to illustrate statistical examples in the course.",
+    "verified_at": "2026-10-28T01:36:57Z",
+    "prerequisite_note": "STAB27H3 or MGEB12H3 or PSYB06H3 or PSYC08H3 or STA221H1"
+  },
+  {
+    "course_id": "MGAB01H3",
+    "title": "Introductory Financial Accounting I",
+    "official_url": "https://utsc.calendar.utoronto.ca/course/mgab01h3",
+    "calendar_year": "2026-2027",
+    "candidate_skill_ids": [],
+    "evidence_text": "The calendar describes accounting techniques and financial statement preparation, but names no canonical catalog tool.",
+    "verified_at": "2026-10-28T00:12:11Z",
+    "prerequisite_note": null
+  },
+  {
+    "course_id": "MGOC10H3",
+    "title": "Analytics for Decision Making",
+    "official_url": "https://utsc.calendar.utoronto.ca/course/mgoc10h3",
+    "calendar_year": "2026-2027",
+    "candidate_skill_ids": [],
+    "evidence_text": "The calendar covers quantitative decision analysis using spreadsheet modelling tools, but does not name Excel or another canonical tool.",
+    "verified_at": "2026-10-28T00:12:11Z",
+    "prerequisite_note": "MGEB02H3 and [MGEB12H3 or MAF2001H or CDPD00] and [MGTA38H3 or (MGTA36H3) or (MGTA35H3)]"
+  }
+]
