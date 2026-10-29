@@ -285,3 +285,40 @@ def test_recovered_by_date_row_produces_exact_expired_deadline(tmp_path):
     assert opportunity["start_date"] is None
     assert opportunity["deadline_date"] == "2026-10-07"
     assert opportunity["deadline_at"] == "2026-10-08T03:59:00Z"
+
+
+@pytest.mark.parametrize("call_posted,event_posted", [
+    ("2026-10-01T16:00:00Z", "2026-10-10T16:00:00Z"),
+    ("2026-10-10T16:00:00Z", "2026-10-01T16:00:00Z"),
+])
+def test_expired_event_removes_undated_speaker_call_in_either_order(tmp_path, monkeypatch, call_posted, event_posted):
+    save(tmp_path,
+         raw("call", "Women in Tech Summit wants YOU to give a five minute talk! Link in bio to sign up or register!", call_posted),
+         raw("event", "Women in Tech Summit\nDate: October 17, 2026\nRegister now via link in bio.", event_posted))
+    report = reprocess(tmp_path, NOW)
+    assert report["counts"] == {"excluded": 1, "merged_duplicate": 1}
+    leader = next(row for row in report["records"] if row["decision"] == "excluded")
+    assert leader["reasons"] == ["expired_start"]
+    group_path = tmp_path / "event_groups" / f"{leader['source_post_id']}.json"
+    group = json.loads(group_path.read_text())
+    assert group["draft"]["opportunity"]["kind"] == "event"
+    assert group["draft"]["opportunity"]["start_date"] == "2026-10-17"
+    review._validator("opportunity-draft").validate(group["draft"])
+    assert json.loads((tmp_path / "publishable-candidates.json").read_text())["candidates"] == []
+    monkeypatch.setattr(review, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(review, "DRAFTS_DIR", tmp_path / "drafts")
+    csv_path, _ = review.export_review(tmp_path / "review")
+    with csv_path.open(encoding="utf-8-sig", newline="") as stream:
+        assert list(csv.DictReader(stream)) == []
+    reprocess(tmp_path, NOW)
+    assert json.loads(group_path.read_text())["content_revision"] == group["content_revision"]
+
+
+@pytest.mark.parametrize("caption,posted", [
+    ("Women in Tech Summit ambassador applications open! Apply now.", "2026-10-01T16:00:00Z"),
+    ("Women in Tech Summit call for speakers. Apply now.", "2025-10-01T16:00:00Z"),
+])
+def test_other_recruitment_and_previous_year_calls_stay_separate(tmp_path, caption, posted):
+    save(tmp_path, raw("call", caption, posted),
+         raw("event", "Women in Tech Summit\nDate: October 17, 2026\nRegister now.", "2026-10-10T16:00:00Z"))
+    assert "merged_duplicate" not in reprocess(tmp_path, NOW)["counts"]

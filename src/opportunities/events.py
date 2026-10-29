@@ -4,6 +4,7 @@ import copy
 import hashlib
 import json
 import re
+from datetime import datetime
 from pathlib import Path
 
 from src.opportunities.drafts import atomic_json
@@ -34,13 +35,29 @@ def identity_keys(draft: dict, raw: dict) -> set[str]:
     return keys
 
 
+def event_speaker_call(draft, raw):
+    """Only explicit speaker calls may bridge an event/ongoing classification."""
+    return draft["opportunity"]["kind"] == "ongoing_opportunity" and bool(re.search(
+        r"give (?:a |an? )?(?:five|\d+)[ -]minute talk|speaker applications?|call for speakers",
+        raw.get("caption_raw") or "", re.I))
+
+
 def compatible(group, item):
     draft, raw = item
     opportunity = draft["opportunity"]
     for previous, prior_raw in group:
         prior = previous["opportunity"]
-        if prior["organizer_id"] != opportunity["organizer_id"] or prior["kind"] != opportunity["kind"]:
+        if prior["organizer_id"] != opportunity["organizer_id"]:
             return False
+        if prior["kind"] != opportunity["kind"]:
+            if not ((prior["kind"] == "event" and event_speaker_call(draft, raw)) or
+                    (opportunity["kind"] == "event" and event_speaker_call(previous, prior_raw))):
+                return False
+        # Undated calls must not attach to a different year's recurring event.
+        if prior_raw.get("posted_at") and raw.get("posted_at"):
+            posted = lambda source: datetime.fromisoformat(source["posted_at"].replace("Z", "+00:00"))
+            if abs((posted(raw) - posted(prior_raw)).total_seconds()) > 120 * 86400:
+                return False
         if prior.get("start_date") and opportunity.get("start_date") and prior["start_date"] != opportunity["start_date"]:
             return False
         if not identity_keys(previous, prior_raw) & identity_keys(draft, raw):
@@ -76,6 +93,8 @@ def merge_group(data_dir: Path, members: list[tuple[dict, dict]]) -> dict:
     leader = raw["source_post_id"]
     merged = copy.deepcopy(base)
     opportunity = merged["opportunity"]
+    if any(draft["opportunity"]["kind"] == "event" for draft, _ in members):
+        opportunity["kind"] = "event"
     ids = [leader] + [item[1]["source_post_id"] for item in members if item[1]["source_post_id"] != leader]
     opportunity["source_post_ids"] = ids
     provenance = {}
