@@ -1,0 +1,18 @@
+{
+  "rule_set_version": "1.0.0",
+  "purpose": "Generate candidate course-to-skill links for review; not a claim that a student has a skill.",
+  "evidence": {
+    "require_official_course_source": true,
+    "retain_exact_evidence_text": true,
+    "candidate_skill_ids_must_exist_in_shared_catalog": true,
+    "do_not_infer_from_course_title_alone": true,
+    "do_not_infer_proficiency_or_completion": true,
+    "human_review_required_before_publication": true
+  },
+  "matching": {
+    "match_skill_names_and_catalog_aliases_as_words": true,
+    "deduplicate_aliases_for_same_skill": true,
+    "emit_only_skills_supported_by_evidence": true
+  },
+  "cases_fixture": "contracts/fixtures/course-skill-mapping-cases.json"
+}

@@ -4,6 +4,7 @@ import pytest
 from config.settings import CORE_ROLE_FAMILIES, ROLE_QUERIES, SEARCH_QUERIES
 from src.feature_engineering import (
     classify_one_career_level,
+    classify_career_levels,
     classify_roles,
     classify_role_title,
     classify_role_title_details,
@@ -150,6 +151,17 @@ def test_classifies_career_level_from_description_or_marks_unknown():
     assert description_result == ('entry_level', 'entry level', 'job_description', 'classified')
     assert unknown_result[0] == 'unknown'
     assert unknown_result[2:] == ('unknown', 'manual_review')
+
+
+def test_career_level_evidence_does_not_overwrite_provider_source():
+    features = classify_career_levels(pd.DataFrame({
+        'job_title': ['Data Analyst'],
+        'job_description': ['A role for an internship student.'],
+        'source': ['jsearch'],
+        'is_senior': [False],
+    }))
+    assert features.loc[0, 'source'] == 'jsearch'
+    assert features.loc[0, 'career_level_evidence_source'] == 'job_description'
 
 
 def test_engineer_features_runs_validation():
