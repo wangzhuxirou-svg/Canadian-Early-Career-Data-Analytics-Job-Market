@@ -8,6 +8,9 @@ import pytest
 
 from src.export_bundle import (
     BundleValidationError,
+    _provenance,
+    _write_checksums,
+    _write_package_files,
     build_package,
     publish_package,
     validate_bundle,
@@ -243,7 +246,7 @@ def test_publication_requires_complete_market_data_and_human_attestation(tmp_pat
 
 
 @pytest.mark.parametrize("human", [False, True])
-def test_real_d6_merged_partial_candidate_reaches_bundle(tmp_path, monkeypatch, human):
+def test_synthetic_d6_merged_partial_candidate_reaches_bundle(tmp_path, monkeypatch, human):
     from src.opportunities import triage
     from src.opportunities.drafts import atomic_json
     from src.opportunities.review import effective_publishable_opportunity
@@ -292,6 +295,19 @@ def test_real_d6_merged_partial_candidate_reaches_bundle(tmp_path, monkeypatch, 
     assert item["review_status"] == "approved"
     eligibility = read_json(package / "dataset_provenance.json")["datasets"]["opportunities"]["records"][0]["eligibility"]
     assert eligibility["decision"] == ("human_approved" if human else "auto_candidate")
+    if not human:
+        provenance_path = package / "dataset_provenance.json"
+        provenance = read_json(provenance_path)
+        provenance["datasets"]["opportunities"]["records"][0]["eligibility"]["decision"] = "human_approved"
+        provenance_path.write_text(json.dumps(provenance), encoding="utf8")
+        checksum_path = package / "SHA256SUMS.txt"
+        bundle_entry = next(
+            line for line in checksum_path.read_text(encoding="ascii").splitlines()
+            if line.endswith("  bundle.json")
+        )
+        checksum_path.write_text(bundle_entry + "\n", encoding="ascii")
+        with pytest.raises(BundleValidationError, match="do not cover: .*dataset_provenance"):
+            validate_package(package, require_provenance=True)
     assert read_json(data / "drafts/post0.json")["opportunity"]["review_status"] != "approved"
     assert read_json(data / "post0.json")["collection_status"] == "partial"
     if not human:
@@ -323,7 +339,6 @@ def test_shared_expiry_policy(fields, now_text, expected):
 
 
 def test_publication_rechecks_exact_event_deadline(tmp_path):
-    from src.export_bundle import _provenance, _write_package_files
     now = datetime.now(timezone.utc)
     base = read_json(FIXTURES / "valid_bundle.json")
     item = base["opportunities"][0]
@@ -343,3 +358,90 @@ def test_publication_rechecks_exact_event_deadline(tmp_path):
     _write_package_files(package, base, _provenance(base, rows))
     with pytest.raises(BundleValidationError, match="expired_deadline"):
         validate_package(package, for_publication=True)
+
+
+@pytest.fixture
+def d7_candidate(tmp_path):
+    bundle = read_json(FIXTURES / "valid_bundle.json")
+    bundle["opportunities"] = []
+    bundle["organizers"] = []
+    package = tmp_path / "candidate"
+    package.mkdir()
+    _write_package_files(package, bundle, _provenance(bundle, []))
+    return package
+
+
+@pytest.mark.parametrize("filename", [
+    "bundle.json", "manifest.json", "market_jobs.json", "skills.json",
+    "organizers.json", "courses.json", "learning_resources.json",
+    "opportunities.json", "reference_statistics.json", "dataset_provenance.json",
+    "release_attestation.template.json", "SHA256SUMS.txt",
+])
+def test_d7_rejects_missing_required_file(d7_candidate, filename):
+    (d7_candidate / filename).unlink()
+    with pytest.raises(BundleValidationError, match="missing"):
+        validate_package(d7_candidate)
+
+
+@pytest.mark.parametrize("case, message", [
+    ("missing_coverage", "do not cover"),
+    ("duplicate", "Duplicate checksum"),
+    ("case_alias", "Duplicate checksum"),
+    ("unsafe_path", "invalid entry"),
+    ("modified", "checksum mismatch"),
+])
+def test_d7_rejects_invalid_checksums_without_publishing(d7_candidate, tmp_path, case, message):
+    checksum = d7_candidate / "SHA256SUMS.txt"
+    lines = checksum.read_text(encoding="ascii").splitlines()
+    provenance_line = next(line for line in lines if line.endswith("  dataset_provenance.json"))
+    if case in {"missing_coverage", "modified"}:
+        provenance = d7_candidate / "dataset_provenance.json"
+        provenance.write_text(provenance.read_text(encoding="utf8") + " ", encoding="utf8")
+    if case == "missing_coverage":
+        lines.remove(provenance_line)
+    elif case == "duplicate":
+        lines.append(provenance_line)
+    elif case == "case_alias":
+        lines.append(provenance_line.replace("dataset_provenance.json", "DATASET_PROVENANCE.json"))
+    elif case == "unsafe_path":
+        lines.append(f"{'0' * 64}  ../bundle.json")
+    checksum.write_text("\n".join(lines) + "\n", encoding="ascii")
+
+    with pytest.raises(BundleValidationError, match=message):
+        validate_package(d7_candidate, require_provenance=True)
+    output = tmp_path / "published"
+    with pytest.raises(BundleValidationError, match=message):
+        publish_package(d7_candidate, output, tmp_path / "unused.json")
+    assert not output.exists()
+
+
+@pytest.mark.parametrize("case, message", [
+    ("job_count", "job_count"),
+    ("analyzable_description_count", "analyzable_description_count"),
+    ("mention_count", "skill rows"),
+    ("mention_rate", "skill rows"),
+    ("missing_skill", "skill rows"),
+    ("duplicate_skill", "duplicate skill_id"),
+    ("invalid_shape", "contract validation failed"),
+])
+def test_d7_rejects_incorrect_statistics_with_valid_checksums(d7_candidate, case, message):
+    path = d7_candidate / "reference_statistics.json"
+    stats = read_json(path)
+    if case in {"job_count", "analyzable_description_count"}:
+        stats[case] += 1
+    elif case == "mention_count":
+        stats["skills"][0][case] += 1
+    elif case == "mention_rate":
+        row = stats["skills"][0]
+        row[case] = row[case] * 0.99999 if row[case] else 0.00001
+    elif case == "missing_skill":
+        stats["skills"].pop()
+    elif case == "duplicate_skill":
+        stats["skills"].append(stats["skills"][0])
+    elif case == "invalid_shape":
+        del stats["skills"][0]["mention_rate"]
+    path.write_text(json.dumps(stats), encoding="utf8")
+    _write_checksums(d7_candidate)
+
+    with pytest.raises(BundleValidationError, match=message):
+        validate_package(d7_candidate)

@@ -56,6 +56,20 @@ revalidates every market record and package reference before building. It does
 not alter market collection timestamps, query configuration, or market data;
 unsupported schema versions are rejected.
 
+## Required D7 files
+
+A candidate requires `SHA256SUMS.txt` and all of the following files, each with
+one matching SHA-256 entry:
+
+- `bundle.json`, `manifest.json`, `market_jobs.json` and `skills.json`
+- `courses.json`, `learning_resources.json`, `organizers.json` and `opportunities.json`
+- `dataset_provenance.json`, `reference_statistics.json` and `release_attestation.template.json`
+
+A published copy also includes and covers `release_attestation.json`. The
+validator checks the statistics schema and recomputes the counts and raw rates
+from the bundled market jobs. With a zero denominator, rates remain JSON
+`null`. The legacy D4 input can still use its bundle-only checksum list.
+
 ## Publication gate
 
 A contract-valid candidate is not necessarily releasable. Publication requires

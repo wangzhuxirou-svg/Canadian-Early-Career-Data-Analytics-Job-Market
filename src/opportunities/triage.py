@@ -240,13 +240,13 @@ def reprocess(data_dir: Path = DATA_DIR, now=None) -> dict:
     from src.opportunities.events import consolidate, display_draft
     by_id = {item["source_post_id"]: item for item in records}
     available = []
+    # Expired posts can supply dates to undated reminders before group assessment.
+    temporal_exclusions = {"expired_deadline", "expired_start", "expired_end"}
     for post_id, raw in raw_posts.items():
         path = data_dir / "drafts" / f"{post_id}.json"
-        # Expired posts still provide identity/date evidence for undated calls.
-        # Consolidate first, then assess the combined event for expiry.
-        temporal_exclusions = {"expired_deadline", "expired_start", "expired_end"}
+        reasons = set(by_id[post_id]["reasons"])
         if path.exists() and (by_id[post_id]["decision"] != "excluded" or
-                              set(by_id[post_id]["reasons"]) <= temporal_exclusions):
+                              reasons and reasons <= temporal_exclusions):
             draft = json.loads(path.read_text(encoding="utf-8"))
             if not draft.get("exclusion_reason"):
                 available.append((draft, raw))

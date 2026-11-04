@@ -8,6 +8,70 @@ from datetime import datetime
 from pathlib import Path
 
 from src.opportunities.drafts import atomic_json
+from src.opportunities.temporal import clock_zone
+
+
+def _merge_temporal(prefix, members, merged, provenance, updates):
+    date_key, at_key = f"{prefix}_date", f"{prefix}_at"
+    text_key, precision_key = f"{prefix}_date_text", f"{prefix}_precision"
+    choices = [(draft["opportunity"], source) for draft, source in members
+               if draft["opportunity"].get(date_key) or draft["opportunity"].get(at_key)]
+    if not choices:
+        return
+
+    selected, source = choices[-1]
+    day = selected.get(date_key)
+    dates = {item.get(date_key) for item, _ in choices}
+    same_day = [(item, raw) for item, raw in choices if item.get(date_key) == day]
+    update_text = source.get("caption_raw") or ""
+    deadline_update = prefix == "deadline" and bool(re.search(
+        r"\b(?:extend\w*|reopen\w*|more spots|last call|new deadline|now closes)\b", update_text, re.I))
+    if len(dates) > 1:
+        if prefix == "deadline" and (deadline_update or len(same_day) >= 2):
+            updates.append(f"{date_key}: later update supersedes {sorted(str(value) for value in dates)}")
+        else:
+            merged["conflicts"].append(f"Related posts disagree on {date_key}.")
+            merged["opportunity"].update({date_key: None, at_key: None, text_key: None, precision_key: "unknown"})
+            return
+
+    exact_choices = []
+    # A clock from before the most recent date change is no longer current,
+    # even when the date later returns to its original value.
+    for item, raw in reversed(choices):
+        if item.get(date_key) != day:
+            break
+        instant = item.get(at_key)
+        if not instant:
+            continue
+        evidence = item.get(text_key) or ""
+        try:
+            source_zone = clock_zone(evidence, item.get("timezone") or "America/Toronto")
+            local_day = datetime.fromisoformat(instant.replace("Z", "+00:00")).astimezone(source_zone).date()
+            if local_day.isoformat() != day:
+                raise ValueError("Clock date does not match source date")
+        except ValueError:
+            merged["conflicts"].append(f"Related post {raw['source_post_id']} has inconsistent {prefix} date and time.")
+        else:
+            exact_choices.append((item, raw))
+
+    exact = None
+    if exact_choices:
+        latest_exact, exact_source = exact_choices[0]
+        instants = {item[at_key] for item, _ in exact_choices}
+        if len(instants) == 1 or (deadline_update and exact_source is source):
+            selected, source = latest_exact, exact_source
+            exact = selected[at_key]
+            if len(instants) > 1:
+                updates.append(f"{at_key}: later update supersedes {sorted(instants)}")
+        else:
+            merged["conflicts"].append(f"Related posts disagree on {at_key}.")
+
+    merged["opportunity"].update({date_key: day, at_key: exact, text_key: selected.get(text_key),
+                                  precision_key: "datetime" if exact else "date" if day else "unknown"})
+    if day:
+        provenance[date_key] = source["source_post_id"]
+    if exact:
+        provenance[at_key] = source["source_post_id"]
 
 
 def identity_keys(draft: dict, raw: dict) -> set[str]:
@@ -102,8 +166,7 @@ def merge_group(data_dir: Path, members: list[tuple[dict, dict]]) -> dict:
     # All evidence remains available, with post IDs in the private provenance.
     merged["evidence"] = [copy.deepcopy(evidence) for draft, _ in members for evidence in draft["evidence"]]
     merged["conflicts"] = sorted(set(conflict for draft, _ in members for conflict in draft["conflicts"]))
-    for field in ("title", "description", "location", "registration_url", "eligibility_note",
-                  "start_date", "end_date", "deadline_date", "start_at", "end_at", "deadline_at"):
+    for field in ("title", "description", "location", "registration_url", "eligibility_note"):
         choices = [(draft["opportunity"].get(field), source, draft) for draft, source in members
                    if draft["opportunity"].get(field)]
         if not choices:
@@ -114,37 +177,10 @@ def merge_group(data_dir: Path, members: list[tuple[dict, dict]]) -> dict:
             selected = max(choices, key=lambda item: len(item[0]))
         else:
             selected = choices[-1]
-        unique = {str(item[0]).casefold().replace("’", "'") for item in choices}
-        if field in {"start_at", "end_at", "deadline_at", "deadline_date"} and len(unique) > 1:
-            # Date extensions need a human when posts disagree; never invent a
-            # single deadline by choosing whichever is most convenient.
-            latest_value = choices[-1][0]
-            confirmations = sum(item[0] == latest_value for item in choices)
-            update_text = choices[-1][1].get("caption_raw") or ""
-            if field.startswith("deadline") and (confirmations >= 2 or re.search(r"extend|reopen|more spots|last call|new deadline|now closes", update_text, re.I)):
-                updates.append(f"{field}: later update supersedes {sorted(unique)}")
-            else:
-                merged["conflicts"].append(f"Related posts disagree on {field}.")
-                opportunity[field] = None
-                continue
         opportunity[field] = selected[0]
         provenance[field] = selected[1]["source_post_id"]
-        if field.endswith("_date") or field.endswith("_at"):
-            prefix = field.rsplit("_", 1)[0]
-            for suffix in ("precision", "date_text"):
-                opportunity[f"{prefix}_{suffix}"] = selected[2]["opportunity"][f"{prefix}_{suffix}"]
     for prefix in ("start", "end", "deadline"):
-        if any(f"Related posts disagree on {prefix}_date." == conflict for conflict in merged["conflicts"]):
-            opportunity[f"{prefix}_at"] = None
-            opportunity[f"{prefix}_date"] = None
-        elif any(f"Related posts disagree on {prefix}_at." == conflict for conflict in merged["conflicts"]):
-            opportunity[f"{prefix}_at"] = None
-        if opportunity.get(f"{prefix}_at"):
-            opportunity[f"{prefix}_precision"] = "datetime"
-        elif opportunity.get(f"{prefix}_date"):
-            opportunity[f"{prefix}_precision"] = "date"
-        else:
-            opportunity[f"{prefix}_precision"] = "unknown"
+        _merge_temporal(prefix, members, merged, provenance, updates)
     opportunity["date_precision"] = opportunity["start_precision"]
     merged["missing_fields"] = [field for field in base["missing_fields"] if not opportunity.get(field)]
     for field in ("skill_ids", "activity_type_ids", "topic_ids"):

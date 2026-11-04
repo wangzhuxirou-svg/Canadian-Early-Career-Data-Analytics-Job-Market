@@ -23,6 +23,22 @@ RESOURCES_DIR = ROOT / "resources"
 DATA_DIR = ROOT / "data" / "opportunities"
 LOGGER = logging.getLogger("src.export_bundle")
 VERSION_PATTERN = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
+BUNDLE_SIDECARS = {
+    "manifest.json": "manifest",
+    "market_jobs.json": "market_jobs",
+    "skills.json": "skills",
+    "organizers.json": "organizers",
+    "courses.json": "courses",
+    "learning_resources.json": "resources",
+    "opportunities.json": "opportunities",
+}
+D7_CHECKSUM_FILES = frozenset({
+    "bundle.json",
+    *BUNDLE_SIDECARS,
+    "reference_statistics.json",
+    "dataset_provenance.json",
+    "release_attestation.template.json",
+})
 ATTESTATION_CHECKS = (
     "role_classifications",
     "course_evidence",
@@ -229,24 +245,35 @@ def validate_bundle(
                 )
 
 
-def _verify_checksums(package_dir: Path) -> None:
+def _verify_checksums(
+    package_dir: Path, required_files: frozenset[str] = frozenset({"bundle.json"})
+) -> None:
     checksum_path = package_dir / "SHA256SUMS.txt"
-    if not checksum_path.exists():
-        raise BundleValidationError(f"Package checksum file is missing: {checksum_path}.")
+    if checksum_path.is_symlink() or not checksum_path.is_file():
+        raise BundleValidationError(f"Package checksum file is missing or unsafe: {checksum_path}.")
+    try:
+        lines = checksum_path.read_text(encoding="ascii").splitlines()
+    except (OSError, UnicodeError) as error:
+        raise BundleValidationError(f"Cannot read package checksums: {error}") from error
     entries = {}
-    for line in checksum_path.read_text(encoding="ascii").splitlines():
-        match = re.fullmatch(r"([0-9a-f]{64})  ([A-Za-z0-9_.-]+)", line)
+    for line in lines:
+        match = re.fullmatch(r"([0-9a-f]{64})  ([A-Za-z0-9_][A-Za-z0-9_.-]*)", line)
         if not match:
             raise BundleValidationError("Package checksum file has an invalid entry.")
         digest, filename = match.groups()
-        if filename in entries:
+        if filename.endswith(".") or re.fullmatch(
+            r"(?:CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])(?:\..*)?", filename, re.IGNORECASE
+        ):
+            raise BundleValidationError(f"Unsafe checksum filename: {filename}.")
+        if filename.casefold() in entries:
             raise BundleValidationError(f"Duplicate checksum entry for {filename}.")
-        entries[filename] = digest
-    if "bundle.json" not in entries:
-        raise BundleValidationError("Package checksum file does not cover bundle.json.")
-    for filename, expected in entries.items():
-        path = (package_dir / filename).resolve()
-        if path.parent != package_dir.resolve() or not path.is_file():
+        entries[filename.casefold()] = (filename, digest)
+    missing = required_files - {filename for filename, _ in entries.values()}
+    if missing:
+        raise BundleValidationError(f"Package checksums do not cover: {', '.join(sorted(missing))}.")
+    for filename, expected in entries.values():
+        path = package_dir / filename
+        if path.is_symlink() or path.resolve().parent != package_dir.resolve() or not path.is_file():
             raise BundleValidationError(f"Checksum entry references a missing or unsafe file: {filename}.")
         actual = hashlib.sha256(path.read_bytes()).hexdigest()
         if actual != expected:
@@ -354,45 +381,56 @@ def _validate_provenance(bundle: dict, provenance: dict) -> None:
                 _parse_timestamp(value, f"{dataset_name} verification timestamp")
 
 
+def _validate_statistics(statistics: dict, market_jobs: list[dict], contracts_dir: Path) -> None:
+    schemas, registry = _schemas(Path(contracts_dir))
+    validator = Draft202012Validator(schemas["market-statistics.schema.json"], registry=registry)
+    try:
+        validator.validate(statistics)
+    except ValidationError as error:
+        raise BundleValidationError(f"Reference statistics contract validation failed: {error.message}") from error
+
+    expected = calculate_market_statistics(market_jobs)
+    for field in ("job_count", "analyzable_description_count"):
+        if statistics[field] != expected[field]:
+            raise BundleValidationError(f"Reference statistics {field} does not match market_jobs.")
+    _unique_values(statistics["skills"], "skill_id", "Reference statistics")
+    actual_rows = {row["skill_id"]: row for row in statistics["skills"]}
+    expected_rows = {row["skill_id"]: row for row in expected["skills"]}
+    if actual_rows != expected_rows:
+        raise BundleValidationError("Reference statistics skill rows do not match market_jobs.")
+
+
 def validate_package(
     package_dir: Path,
     contracts_dir: Path = CONTRACTS_DIR,
     *,
     for_publication: bool = False,
-    require_provenance: bool = False,
+    require_provenance: bool = True,
 ) -> dict:
+    """Validate a D7 package. The legacy keyword is retained for callers."""
     package_dir = Path(package_dir)
-    _verify_checksums(package_dir)
+    required_files = D7_CHECKSUM_FILES
+    attestation = package_dir / "release_attestation.json"
+    if attestation.exists() or attestation.is_symlink():
+        required_files = required_files | {attestation.name}
+    _verify_checksums(package_dir, required_files)
     bundle = _read_json(package_dir / "bundle.json")
     validate_bundle(bundle, contracts_dir, for_publication=for_publication)
-    for filename, key in (
-        ("manifest.json", "manifest"),
-        ("market_jobs.json", "market_jobs"),
-        ("skills.json", "skills"),
-        ("organizers.json", "organizers"),
-        ("courses.json", "courses"),
-        ("learning_resources.json", "resources"),
-        ("opportunities.json", "opportunities"),
-    ):
-        path = package_dir / filename
-        if path.exists() and _read_json(path) != bundle[key]:
+    for filename, key in BUNDLE_SIDECARS.items():
+        if _read_json(package_dir / filename) != bundle[key]:
             raise BundleValidationError(f"{filename} does not match bundle.json.")
-    provenance_path = package_dir / "dataset_provenance.json"
+    _validate_statistics(
+        _read_json(package_dir / "reference_statistics.json"), bundle["market_jobs"], contracts_dir
+    )
+    _validate_provenance(bundle, _read_json(package_dir / "dataset_provenance.json"))
     if for_publication:
-        require_provenance = True
-    if require_provenance and not provenance_path.is_file():
-        raise BundleValidationError("Dataset collection provenance is missing.")
-    if provenance_path.is_file():
-        provenance = _read_json(provenance_path)
-        _validate_provenance(bundle, provenance)
-        if for_publication:
-            from src.opportunities.temporal import expiration_reason
-            for opportunity in bundle["opportunities"]:
-                expired = expiration_reason(opportunity)
-                if expired:
-                    raise BundleValidationError(
-                        f"Opportunity {opportunity['opportunity_id']} contains an expired date: {expired}."
-                    )
+        from src.opportunities.temporal import expiration_reason
+        for opportunity in bundle["opportunities"]:
+            expired = expiration_reason(opportunity)
+            if expired:
+                raise BundleValidationError(
+                    f"Opportunity {opportunity['opportunity_id']} contains an expired date: {expired}."
+                )
     return bundle
 
 
@@ -532,13 +570,7 @@ def _write_checksums(package_dir: Path) -> None:
 def _write_package_files(package_dir: Path, bundle: dict, provenance: dict) -> None:
     files = {
         "bundle.json": bundle,
-        "manifest.json": bundle["manifest"],
-        "market_jobs.json": bundle["market_jobs"],
-        "skills.json": bundle["skills"],
-        "organizers.json": bundle["organizers"],
-        "courses.json": bundle["courses"],
-        "learning_resources.json": bundle["resources"],
-        "opportunities.json": bundle["opportunities"],
+        **{filename: bundle[key] for filename, key in BUNDLE_SIDECARS.items()},
         "reference_statistics.json": calculate_market_statistics(bundle["market_jobs"]),
         "dataset_provenance.json": provenance,
         "release_attestation.template.json": {
@@ -584,14 +616,9 @@ def _load_market_bundle(
         )
         bundle["manifest"]["schema_version"] = current_schema_version
     validate_bundle(bundle, contracts_dir)
-    for filename, key in (
-        ("market_jobs.json", "market_jobs"),
-        ("skills.json", "skills"),
-        ("organizers.json", "organizers"),
-        ("courses.json", "courses"),
-        ("learning_resources.json", "resources"),
-        ("opportunities.json", "opportunities"),
-    ):
+    for filename, key in BUNDLE_SIDECARS.items():
+        if key == "manifest":
+            continue
         sidecar = package_dir / filename
         if sidecar.exists() and _read_json(sidecar) != bundle[key]:
             raise BundleValidationError(f"{filename} does not match bundle.json.")
