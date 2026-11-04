@@ -7,6 +7,10 @@
   "reason": "Synthetic fixture demonstrates manual approval.",
   "field_overrides": {
     "title": "Example Data Workshop",
-    "activity_type_ids": ["workshop"]
+    "activity_type_ids": ["workshop"],
+    "responsibilities": "Synthetic example responsibilities.",
+    "time_commitment": "Two hours",
+    "compensation_status": "unpaid",
+    "ccr_status": "yes"
   }
 }

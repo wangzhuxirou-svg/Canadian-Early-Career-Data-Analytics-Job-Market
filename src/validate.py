@@ -6,6 +6,7 @@ from config.settings import (
     CAREER_LEVEL_REVIEW_LABELS,
     LIST_COLUMNS,
     ROLE_REVIEW_LABELS,
+    ROLE_SUBTYPES,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ def validate_features(df: pd.DataFrame) -> None:
     required_columns = {
         'job_id',
         'classified_role_family',
+        'classified_role_subtype',
         'classified_career_level',
         'stated_experience_years',
         *LIST_COLUMNS,
@@ -43,6 +45,20 @@ def validate_features(df: pd.DataFrame) -> None:
         errors.append(
             f'Invalid role classifications ({int(invalid_roles.sum())}): '
             f'{_value_counts_text(invalid_values)}.'
+        )
+
+    subtype = df['classified_role_subtype']
+    valid_subtype = subtype.isin(ROLE_SUBTYPES)
+    financial_risk_role = df['classified_role_family'].eq('financial_risk_analyst')
+    invalid_subtypes = (
+        (subtype.notna() & ~valid_subtype)
+        | (subtype.notna() & ~financial_risk_role)
+        | (financial_risk_role & ~valid_subtype)
+    )
+    if invalid_subtypes.any():
+        errors.append(
+            'Invalid role subtypes: '
+            f'{_value_counts_text(df.loc[invalid_subtypes, 'classified_role_subtype'])}.'
         )
 
     invalid_levels = ~df['classified_career_level'].isin(ALLOWED_CAREER_LEVELS)

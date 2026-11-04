@@ -42,11 +42,13 @@ are review states, not counted levels.
 ## Public package contents
 
 `bundle.schema.json` is a validation envelope for the files emitted separately
-by the publisher: manifest, market jobs, skills, courses, resources, and
-approved opportunities. Do not put user records, credentials, API keys,
-Instagram session state, raw descriptions, downloaded media, or private review
-data in that package. Market descriptions are represented only by
-`description_status` and `description_analyzable`.
+by the publisher: manifest, market jobs, skills, organizers, courses, resources,
+and approved opportunities. Opportunities reference organizers by
+`organizer_id`; include the corresponding organizer records in the same bundle
+so clients can resolve display names and profile links. Do not put user
+records, credentials, API keys, Instagram session state, raw descriptions,
+downloaded media, or private review data in that package. Market descriptions
+are represented only by `description_status` and `description_analyzable`.
 
 The `opportunity` schema retains the original singular `source_post_id` and
 `date_precision` fields for compatibility, while adding `source_post_ids`,
@@ -55,6 +57,10 @@ and pending-change state. For a `date` precision, populate the corresponding
 `*_date` and leave `*_at` null. For `datetime`, provide both the local calendar
 date and the exact UTC instant. For `unknown`, both are null. `timezone` is the
 source/event IANA timezone when known.
+
+Opportunity responsibilities and time commitment are nullable strings.
+Compensation uses `paid`, `unpaid`, or `not_stated`; CCR uses `yes`, `no`, or
+`not_stated`. Use `not_stated` only when the source does not specify a value.
 
 The legacy `date_precision` is retained for compatibility; filtering and
 calendar export must use `start_precision`, `end_precision`, and

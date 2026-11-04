@@ -3,7 +3,7 @@
   "$id": "https://utsc.example/contracts/v1/bundle.schema.json",
   "type": "object",
   "additionalProperties": false,
-  "required": ["manifest", "market_jobs", "skills", "courses", "resources", "opportunities"],
+  "required": ["manifest", "market_jobs", "skills", "organizers", "courses", "resources", "opportunities"],
   "properties": {
     "manifest": {
       "allOf": [
@@ -18,6 +18,10 @@
     "skills": {
       "type": "array",
       "items": { "$ref": "https://utsc.example/contracts/v1/skill.schema.json" }
+    },
+    "organizers": {
+      "type": "array",
+      "items": { "$ref": "https://utsc.example/contracts/v1/organizer.schema.json" }
     },
     "courses": {
       "type": "array",

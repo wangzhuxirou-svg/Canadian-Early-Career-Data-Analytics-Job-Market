@@ -9,6 +9,9 @@ ROLE_QUERIES = {
     'bi_analyst': '"bi analyst" OR "business intelligence analyst" OR "reporting analyst"',
     'data_scientist': 'data scientist',
     'data_engineer': '"data engineer" OR "etl developer"',
+    'product_analyst': '"product analyst" OR "product insights analyst" OR "product analytics analyst"',
+    'operations_analyst': '"operations analyst" OR "operational analyst" OR "operations analytics analyst"',
+    'financial_risk_analyst': '"financial analyst" OR "finance analyst" OR "risk analyst" OR "credit risk analyst" OR "risk analytics"',
 }
 
 CAREER_LEVEL_QUERIES = {
@@ -30,15 +33,44 @@ SEARCH_QUERIES = [{
 COUNTRY = 'ca'
 DATE_POST = 'month'
 
+FINANCIAL_RISK_SUBTYPE_KEYWORDS = {
+    'financial_analysis': [
+        'financial analyst',
+        'finance analyst',
+        'financial reporting analyst',
+        'financial planning analyst',
+        'investment analyst',
+        'portfolio analyst',
+        'treasury analyst',
+        'equity research analyst',
+        'analyste financier',
+    ],
+    'risk_analysis': [
+        'risk analyst',
+        'risk analytics analyst',
+        'risk analytics',
+        'credit risk analyst',
+        'market risk analyst',
+        'portfolio risk analyst',
+        'portfolio risk data ai analyst',
+        'portfolio risk data analyst',
+        'climate risk analyst',
+        'climate risk analytics',
+        'operational risk analyst',
+    ],
+}
+
 ROLE_KEYWORDS = {
     'data_analyst': ['data analyst',
                      'junior data analyst',
-                     'data analytics',
+                     'data analytics analyst',
                      ],
     'business_analyst': ['business analyst',
                          'junior business analyst',
                          'business system analyst',
                          'business systems analyst',
+                         'business process analyst',
+                         'analyst product management',
                          ],
     'bi_analyst': ['bi analyst',
                    'business intelligence analyst',
@@ -46,7 +78,6 @@ ROLE_KEYWORDS = {
                    'analyst business intelligence',
                    'analyste bi',
                    'analyste intelligence',
-                   'business intelligence',
                    ],
     'data_scientist': ['data scientist',
                        'junior data scientist',
@@ -62,12 +93,28 @@ ROLE_KEYWORDS = {
                       'data engineering',
                       'data platform engineer',
                       ],
+    'product_analyst': ['product analyst',
+                        'product insights analyst',
+                        'product analytics analyst',
+                        'product management analyst',
+                        ],
+    'operations_analyst': ['operations analyst',
+                            'operational analyst',
+                            'operations analytics analyst',
+                            ],
+    'financial_risk_analyst': [
+        keyword
+        for keywords in FINANCIAL_RISK_SUBTYPE_KEYWORDS.values()
+        for keyword in keywords
+    ],
+}
+
+ROLE_KEYWORD_EXCLUSIONS = {
+    'bi_analyst': ['financial reporting analyst', 'climate risk analytics'],
 }
 
 
 ADJACENT_ROLE_KEYWORDS = {
-    'product_analyst': ['product analyst'],
-    'operations_analyst': ['operations analyst'],
     'marketing_analyst': ['marketing analyst'],
     'insight_analyst': ['insight analyst'],
 }
@@ -89,6 +136,7 @@ OUTSIDE_ROLE_KEYWORDS = [
 ]
 
 CORE_ROLE_FAMILIES = set(ROLE_KEYWORDS)
+ROLE_SUBTYPES = {'financial_analysis', 'risk_analysis'}
 ROLE_REVIEW_LABELS = {
     'hybrid',
     'adjacent_hybrid',
@@ -203,6 +251,8 @@ API_FIELDS = [
 ]
 
 TRACKING_FIELDS = [
+    'source',
+    'source_job_id',
     'role_family',
     'role_query',
     'search_level',
@@ -226,7 +276,7 @@ SENIORITY_EXCLUDE_KEYWORDS = [
 ]
 
 START_PAGE = 1
-MAX_PAGES = 4
+MAX_PAGES = 1
 REQUEST_DELAY_SECONDS = 1
 
 PROVINCE_MAP = {

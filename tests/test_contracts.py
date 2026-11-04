@@ -96,6 +96,23 @@ def test_bundle_only_allows_approved_opportunities(schemas_and_registry):
         validate(bundle, schemas["bundle"], registry)
 
 
+def test_bundle_opportunity_organizers_are_resolvable():
+    bundle = load_json(FIXTURES_DIR / "valid_bundle.json")
+    organizer_id_list = [organizer["organizer_id"] for organizer in bundle["organizers"]]
+    organizer_ids = set(organizer_id_list)
+    assert len(organizer_ids) == len(organizer_id_list)
+    assert {opportunity["organizer_id"] for opportunity in bundle["opportunities"]} <= organizer_ids
+
+
+def test_opportunity_rejects_unsupported_compensation_and_ccr_statuses(schemas_and_registry):
+    schemas, registry = schemas_and_registry
+    for field in ("compensation_status", "ccr_status"):
+        bundle = copy.deepcopy(load_json(FIXTURES_DIR / "valid_bundle.json"))
+        bundle["opportunities"][0][field] = "unknown"
+        with pytest.raises(ValidationError):
+            validate(bundle, schemas["bundle"], registry)
+
+
 def test_fixture_skill_references_are_resolvable():
     bundle = load_json(FIXTURES_DIR / "valid_bundle.json")
     experience_fixture = load_json(FIXTURES_DIR / "valid_experience_skill_candidates.json")

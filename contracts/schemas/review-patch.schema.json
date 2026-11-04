@@ -18,6 +18,10 @@
         "kind": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/opportunityKind" },
         "title": { "type": "string", "minLength": 1 },
         "description": { "type": ["string", "null"] },
+        "responsibilities": { "type": ["string", "null"] },
+        "time_commitment": { "type": ["string", "null"] },
+        "compensation_status": { "type": "string", "enum": ["paid", "unpaid", "not_stated"] },
+        "ccr_status": { "type": "string", "enum": ["yes", "no", "not_stated"] },
         "activity_type_ids": {
           "type": "array",
           "items": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/activityTypeId" },
