@@ -6,6 +6,23 @@ from zoneinfo import ZoneInfo
 
 RANGE = re.compile(r"(?<![\d:])(?P<a>\d{1,2}(?::\d{2})?)\s*(?P<ap>[ap]\.?m\.?)?\s*(?:[-–—]|to)\s*(?P<b>\d{1,2}(?::\d{2})?)\s*(?P<bp>[ap]\.?m\.?)?(?!\w)", re.I)
 SINGLE = re.compile(r"(?<![\d:])(?P<a>\d{1,2}(?::\d{2})?)\s*(?P<ap>[ap]\.?m\.?)(?!\w)|(?:at|@|time:)\s*(?P<clock>\d{1,2}:\d{2})\s*(?P<cp>[ap]\.?m\.?)?(?!\d)", re.I)
+NOON = re.compile(r"\b(?:(?:at|by)\s+|time:\s*)noon\b", re.I)
+ZONE_TOKEN = re.compile(
+    r"\b(?:UTC|GMT)(?:\s*[+-]\d{1,2}(?::?\d{2})?)?(?!\w)|"
+    r"\b(?:[ECMP][SD]?T|[A-Z]{2,5}[SD]T|CET|CEST|BST|IST|HST|AKST|AKDT|"
+    r"JST|KST|SGT|WET|WEST|EET|EEST|AST|ADT|NST|NDT|Eastern|Central|Mountain|Pacific)\b|"
+    r"\b[A-Z_]+/[A-Z_]+\b", re.I
+)
+
+
+def clock_zone(text, zone="America/Toronto"):
+    matches = {match.group().casefold() for match in ZONE_TOKEN.finditer(text)}
+    zones = {"utc": timezone.utc, "gmt": timezone.utc, "et": ZoneInfo("America/Toronto"),
+             "eastern": ZoneInfo("America/Toronto"),
+             "est": timezone(timedelta(hours=-5)), "edt": timezone(timedelta(hours=-4))}
+    if matches - zones.keys() or len({zones[key] for key in matches}) > 1:
+        raise ValueError("Explicit timezone needs confirmation")
+    return zones[next(iter(matches))] if matches else ZoneInfo(zone)
 
 
 def _clock(value, meridiem=None):
@@ -19,19 +36,17 @@ def _clock(value, meridiem=None):
 
 
 def _utc(day, clock, zone):
-    local = datetime.combine(datetime.fromisoformat(day).date(), clock, ZoneInfo(zone))
+    local = datetime.combine(datetime.fromisoformat(day).date(), clock, zone)
     # Ambiguous/nonexistent wall times need an operator, not a guessed offset.
     if local.replace(fold=0).utcoffset() != local.replace(fold=1).utcoffset():
         raise ValueError("Ambiguous or nonexistent local clock time")
     utc = local.astimezone(timezone.utc)
-    if utc.astimezone(ZoneInfo(zone)).replace(tzinfo=None) != local.replace(tzinfo=None):
+    if utc.astimezone(zone).replace(tzinfo=None) != local.replace(tzinfo=None):
         raise ValueError("Nonexistent local clock time")
     return utc.isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
 def clock_range(line: str, day: str, zone="America/Toronto"):
-    if re.search(r"\b(?:UTC|GMT|PST|PDT|CST|CDT|MST|MDT|CET|CEST|BST)\b", line):
-        raise ValueError("Explicit non-Toronto timezone needs confirmation")
     for match in RANGE.finditer(line):
         a, b, ap, bp = (match.group(key) for key in ("a", "b", "ap", "bp"))
         if not ap and not bp and not (":" in a and ":" in b):
@@ -42,7 +57,8 @@ def clock_range(line: str, day: str, zone="America/Toronto"):
                 ap = "am"
         if ap and not bp:
             bp = ap
-        start, end = _utc(day, _clock(a, ap), zone), _utc(day, _clock(b, bp), zone)
+        source_zone = clock_zone(line, zone)
+        start, end = _utc(day, _clock(a, ap), source_zone), _utc(day, _clock(b, bp), source_zone)
         if end <= start:
             raise ValueError("End clock must follow start; overnight ranges need confirmation")
         return start, end
@@ -50,12 +66,13 @@ def clock_range(line: str, day: str, zone="America/Toronto"):
 
 
 def deadline_clock(line: str, day: str, zone="America/Toronto"):
-    if re.search(r"\b(?:at|by) noon\b", line, re.I):
-        return _utc(day, time(12), zone)
+    if NOON.search(line):
+        return _utc(day, time(12), clock_zone(line, zone))
     match = SINGLE.search(line)
     if not match:
         return None
-    return _utc(day, _clock(match.group("clock") or match.group("a"), match.group("ap") or match.group("cp")), zone)
+    clock = _clock(match.group("clock") or match.group("a"), match.group("ap") or match.group("cp"))
+    return _utc(day, clock, clock_zone(line, zone))
 
 
 def relative_deadline(text: str, posted_at: str | None):

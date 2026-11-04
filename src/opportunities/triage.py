@@ -247,9 +247,12 @@ def reprocess(data_dir: Path = DATA_DIR, now=None) -> dict:
     from src.opportunities.events import consolidate, display_draft
     by_id = {item["source_post_id"]: item for item in records}
     available = []
+    temporal_exclusions = {"expired_deadline", "expired_start", "expired_end"}
     for post_id, raw in raw_posts.items():
         path = data_dir / "drafts" / f"{post_id}.json"
-        if path.exists() and (by_id[post_id]["decision"] != "excluded" or by_id[post_id]["reasons"] == ["expired_deadline"]):
+        reasons = set(by_id[post_id]["reasons"])
+        if path.exists() and (by_id[post_id]["decision"] != "excluded" or
+                              reasons and reasons <= temporal_exclusions):
             draft = json.loads(path.read_text(encoding="utf-8"))
             if not draft.get("exclusion_reason"):
                 available.append((draft, raw))

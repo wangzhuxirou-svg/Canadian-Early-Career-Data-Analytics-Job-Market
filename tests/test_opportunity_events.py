@@ -6,8 +6,9 @@ from datetime import datetime, timezone
 
 import pytest
 
-from src.opportunities import review
+from src.opportunities import review, triage
 from src.opportunities.drafts import atomic_json, source_is_current
+from src.opportunities.events import merge_group
 from src.opportunities.extract import build_draft
 from src.opportunities.scan import opportunity_relevance
 from src.opportunities.temporal import clock_range, deadline_clock
@@ -167,6 +168,8 @@ def test_manual_queue_shows_one_group_and_stale_group_csv_is_rejected(tmp_path, 
     monkeypatch.setattr(review, "DATA_DIR", tmp_path)
     monkeypatch.setattr(review, "DRAFTS_DIR", tmp_path / "drafts")
     monkeypatch.setattr(review, "OVERRIDES_DIR", tmp_path / "review_overrides")
+    assess = triage.assess
+    monkeypatch.setattr(triage, "assess", lambda draft, raw, data_dir, now=NOW: assess(draft, raw, data_dir, now))
     csv_path, _ = review.export_review(tmp_path / "review", include_auto=True)
     with csv_path.open(encoding="utf-8-sig", newline="") as stream:
         rows = list(csv.DictReader(stream))
@@ -285,3 +288,76 @@ def test_recovered_by_date_row_produces_exact_expired_deadline(tmp_path):
     assert opportunity["start_date"] is None
     assert opportunity["deadline_date"] == "2026-10-07"
     assert opportunity["deadline_at"] == "2026-10-08T03:59:00Z"
+
+
+def test_expired_original_and_undated_reminder_merge_before_expiration(tmp_path):
+    save(tmp_path,
+         raw("original", "Python Workshop\nDate: October 27, 2026\nRegister now."),
+         raw("reminder", "Python Workshop reminder\nRegister now.", "2026-10-26T16:00:00Z"))
+    report = reprocess(tmp_path, NOW)
+    assert report["counts"] == {"excluded": 1, "merged_duplicate": 1}
+    assert next(row for row in report["records"] if row["decision"] == "excluded")["reasons"] == ["expired_start"]
+    group = json.loads((tmp_path / "event_groups/original.json").read_text())
+    opportunity = group["draft"]["opportunity"]
+    assert opportunity["source_post_ids"] == ["original", "reminder"]
+    assert opportunity["start_date"] == "2026-10-27"
+    assert json.loads((tmp_path / "publishable-candidates.json").read_text())["candidates"] == []
+
+
+@pytest.mark.parametrize("update,expected", [
+    ("Registration extended to October 30, 2026.", "auto_candidate"),
+    ("Registration closes October 30, 2026.", "needs_review"),
+])
+def test_date_only_deadline_change_drops_old_clock(tmp_path, update, expected):
+    save(tmp_path,
+         raw("original", "Python Workshop\nDate: November 20, 2026\nRegistration closes October 26, 2026 at 11:59 PM."),
+         raw("update", f"Python Workshop\nRegister now. {update}", "2026-10-27T16:00:00Z"))
+    assert reprocess(tmp_path, NOW)["counts"] == {expected: 1, "merged_duplicate": 1}
+    group = json.loads((tmp_path / "event_groups/original.json").read_text())
+    opportunity = group["draft"]["opportunity"]
+    assert opportunity["source_post_ids"] == ["original", "update"]
+    assert opportunity["deadline_at"] is None
+    assert "deadline_at" not in group["field_sources"]
+    if expected == "auto_candidate":
+        assert opportunity["deadline_date"] == "2026-10-30"
+        assert opportunity["deadline_precision"] == "date"
+        assert update in opportunity["deadline_date_text"]
+    else:
+        assert opportunity["deadline_date"] is None
+
+
+@pytest.mark.parametrize("suffix,instant,decision", [
+    (" at 5 PM PST", None, "needs_review"),
+    (" at noon pSt", None, "needs_review"),
+    (" at 5 PM UTC", "2026-11-20T17:00:00Z", "auto_candidate"),
+    (" at noon uTc", "2026-11-20T12:00:00Z", "auto_candidate"),
+    ("", None, "auto_candidate"),
+])
+@pytest.mark.parametrize("field", ["deadline", "start"])
+def test_explicit_timezone_is_checked_for_single_clocks(tmp_path, suffix, instant, decision, field):
+    date_line = "Applications close" if field == "deadline" else "Date:"
+    line = f"{date_line} November 20, 2026{suffix}"
+    post = raw("zoned", f"Python Workshop\nRegister now.\n{line}")
+    save(tmp_path, post)
+    assert process_local_post(tmp_path, post, NOW)["decision"] == decision
+    opportunity = json.loads((tmp_path / "drafts/zoned.json").read_text())["opportunity"]
+    assert opportunity[f"{field}_date"] == "2026-11-20"
+    assert opportunity[f"{field}_at"] == instant
+    assert opportunity[f"{field}_precision"] == ("datetime" if instant else "date")
+    assert line in opportunity[f"{field}_date_text"]
+
+
+@pytest.mark.parametrize("instant,expected", [
+    ("2026-11-20T01:00:00Z", "2026-11-20T01:00:00Z"),
+    ("2026-11-21T01:00:00Z", None),
+])
+def test_group_checks_exact_clock_against_date_in_source_timezone(tmp_path, instant, expected):
+    original = raw("original", "Python Workshop\nDate: November 20, 2026 at 1 AM UTC\nRegister now.")
+    reminder = raw("reminder", "Python Workshop\nRegister now.", "2026-10-26T16:00:00Z")
+    draft = build_draft(original)
+    draft["opportunity"]["start_at"] = instant
+    group = merge_group(tmp_path, [(draft, original), (build_draft(reminder), reminder)])
+    merged = group["draft"]
+    assert merged["opportunity"]["start_date"] == "2026-11-20"
+    assert merged["opportunity"]["start_at"] == expected
+    assert bool(merged["conflicts"]) == (expected is None)

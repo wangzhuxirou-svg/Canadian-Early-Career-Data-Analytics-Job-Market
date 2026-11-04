@@ -58,7 +58,8 @@ REGISTRATION_REQUEST_PATTERN = re.compile(
 )
 DEADLINE_LABELS = ("deadline", "due date", "apply by", "applications close", "application closes",
                    "registration closes", "registration close", "register by", "applications will close",
-                   "applications close on", "applications closing", "closes on")
+                   "applications close on", "applications closing", "closes on",
+                   "registration extended", "registration is extended", "applications extended")
 LOCATION_PATTERN = re.compile(
     r"(?:(?:location|venue|address)\s*:\s*|📍\s*(?:(?:location|venue|address)\s*:\s*)?)([^\n\r]+)", re.IGNORECASE
 )
@@ -664,7 +665,7 @@ def build_draft(raw_post: dict, ocr_dir: Path | None = None) -> dict | None:
                 try:
                     parsed = clock_range(line, start_date)
                 except ValueError as error:
-                    clock_errors.append((part, str(error)))
+                    clock_errors.append((part, line.strip(), str(error)))
                     continue
                 if parsed:
                     ranges.append((parsed, part, line.strip()))
@@ -672,14 +673,20 @@ def build_draft(raw_post: dict, ocr_dir: Path | None = None) -> dict | None:
                     try:
                         exact_start = deadline_clock(line, start_date)
                     except ValueError as error:
-                        clock_errors.append((part, str(error)))
+                        clock_errors.append((part, line.strip(), str(error)))
                     else:
                         if exact_start:
                             starts.append((exact_start, part, line.strip()))
         caption_ranges = [item for item in ranges if item[1]["source_part"] == "caption"]
-        for part, error in clock_errors:
-            if part["source_part"] == "caption" or not (caption_ranges or any(item[1]["source_part"] == "caption" for item in starts)):
-                conflicts.append(f"Clock time needs confirmation: {error}")
+        caption_starts = [item for item in starts if item[1]["source_part"] == "caption"]
+        relevant_errors = [(line, error) for part, line, error in clock_errors
+                           if part["source_part"] == "caption" or not (caption_ranges or caption_starts)]
+        if relevant_errors:
+            conflicts.extend(f"Clock time needs confirmation: {error}" for _, error in relevant_errors)
+            opportunity["start_date_text"] = " | ".join(dict.fromkeys(
+                [start_date_text] + [line for line, _ in relevant_errors]))
+            ranges, starts = [], []
+            caption_ranges, caption_starts = [], []
         ranges = caption_ranges or ranges
         if len({item[0] for item in ranges}) == 1:
             (start_at, end_at), part, line = ranges[0]
@@ -689,11 +696,10 @@ def build_draft(raw_post: dict, ocr_dir: Path | None = None) -> dict | None:
             for field, value in (("start_at", start_at), ("end_at", end_at)):
                 evidence.append({"field": field, "candidate_value": value, "evidence_text": line,
                                  "source_part": part["source_part"], "media_position": part["media_position"],
-                                 "rule_id": "time.explicit_range_toronto"})
+                                 "rule_id": "time.explicit_range"})
         elif len({item[0] for item in ranges}) > 1:
             conflicts.append("Multiple distinct event time ranges were found.")
         elif starts:
-            caption_starts = [item for item in starts if item[1]["source_part"] == "caption"]
             starts = caption_starts or starts
             if len({item[0] for item in starts}) == 1:
                 value, part, line = starts[0]
@@ -701,7 +707,7 @@ def build_draft(raw_post: dict, ocr_dir: Path | None = None) -> dict | None:
                                    start_date_text=(start_date_text or "") + " | " + line)
                 evidence.append({"field": "start_at", "candidate_value": value, "evidence_text": line,
                                  "source_part": part["source_part"], "media_position": part["media_position"],
-                                 "rule_id": "time.explicit_start_toronto"})
+                                 "rule_id": "time.explicit_start"})
             else:
                 conflicts.append("Multiple distinct event start times were found.")
     if deadline_candidate:
@@ -715,7 +721,7 @@ def build_draft(raw_post: dict, ocr_dir: Path | None = None) -> dict | None:
                 opportunity.update(deadline_at=exact, deadline_precision="datetime")
                 evidence.append({"field": "deadline_at", "candidate_value": exact, "evidence_text": line,
                                  "source_part": part["source_part"], "media_position": part["media_position"],
-                                 "rule_id": "time.explicit_deadline_toronto"})
+                                 "rule_id": "time.explicit_deadline"})
 
     return {
         "draft_id": _draft_id(raw_post["source_post_id"]),
