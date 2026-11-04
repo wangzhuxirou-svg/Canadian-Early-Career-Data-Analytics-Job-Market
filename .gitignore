@@ -17,9 +17,14 @@ __pycache__/
 data/history/
 data/history.zip
 data/runs/
+data/opportunities/
+.local/instagram-profile/
+.local/easyocr-models/
 .pytest-review-temp*/
+UTSC_Club_Instagram(3).xlsx
 h origin main
 
 # Local virtual environment
 .venv/
+.venv-ocr/
 venv/
