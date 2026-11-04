@@ -7,7 +7,7 @@ real market or club data.
 
 ## Version and validation
 
-- Contract version: `1.0.0` (JSON Schema Draft 2020-12).
+- Contract version: `1.1.0` (JSON Schema Draft 2020-12).
 - Breaking field, meaning, or enum changes require a new major version and
   coordinated changes on both sides. New optional fields may use a minor
   version; corrections that do not change accepted data may use a patch version.
@@ -117,6 +117,15 @@ separate contract and rule set: the fixed
 `valid_experience_skill_candidates.json` example distinguishes affirmed,
 negated, planned, and third-person/ambiguous mentions. Course and experience
 candidates never automatically confirm a user's skill.
+
+Contract 1.1.0 adds the optional nullable `resource.mapping_evidence` field.
+Existing resource records without it remain valid. D5-maintained resource
+records with non-empty `skill_ids` must provide non-empty evidence from the
+official source; when there is no supported mapping, keep `skill_ids` empty.
+`source_url` records the source and `verified_at` records the actual date/time
+of verification. Course records continue to use `evidence_text` for mapping
+evidence and `prerequisite_note` for source wording; prerequisite text does
+not imply an automated eligibility decision.
 
 ## Role and opportunity enums
 

@@ -69,9 +69,11 @@ with TemporaryDirectory(prefix="market-package-build-") as temp_dir:
 ```
 
 The package contains `bundle.json` for contract validation and standalone
-`manifest.json`, `market_jobs.json`, `skills.json`, and
-`reference_statistics.json` for convenient client loading. `SHA256SUMS.txt`
-contains the bundle digest. `run_status` is deliberately `partial`: the
+`manifest.json`, `market_jobs.json`, `skills.json`, `courses.json`,
+`learning_resources.json`, and `reference_statistics.json` for convenient
+client loading. The skills catalog is the union of skills referenced by market
+jobs, courses, and learning resources. `SHA256SUMS.txt` contains the bundle
+digest. `run_status` is deliberately `partial`: the
 historical classifier output has not received the required manual review.
 Keep this package for internal frontend/data-contract integration only. Do not
 present it as a verified or current market snapshot until the role review is
