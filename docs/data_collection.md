@@ -345,6 +345,18 @@ in progress. No live collection or trial is started by offline tests.
 
 ## Automatic candidates and exception review
 
+Same-event consolidation retains posts excluded only for expired start/end or
+deadline dates as evidence. An undated explicit speaker call may join its named
+event from the same organizer even when classified as an ongoing opportunity;
+the merged event is then checked for expiry. Other recruitment types remain
+separate. Posts more than 120 days apart are not automatically consolidated,
+in addition to the existing year, date and recurring-session guards.
+
+The 2026-10-29 local rebuild groups Women in Tech speaker call `DeCt0uyphlq`
+with dated announcement `DeaQaC2jAPE`. The latter supplies `2026-10-17`, so the
+combined event is excluded as `expired_start`; neither appears in the current
+review queue or publishable candidates. Raw evidence is retained for audit.
+
 Rebuild **existing local snapshots and OCR only**, without a browser or downloads:
 
 ```powershell

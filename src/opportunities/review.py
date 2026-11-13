@@ -463,21 +463,23 @@ def effective_approved_opportunity(draft: dict, data_dir: Path | None = None) ->
     return updated
 
 
-def effective_publishable_opportunity(draft: dict) -> dict | None:
+def effective_publishable_opportunity(draft: dict, data_dir: Path | None = None,
+                                      now: datetime | None = None) -> dict | None:
     """D7 candidate reader: recheck time/source and preserve human priority."""
     from src.opportunities.triage import assess, candidate_projection
     from src.opportunities.events import display_draft
-    triage_path = DATA_DIR / "triage" / f"{draft['opportunity']['source_post_id']}.json"
+    source_dir = data_dir or DATA_DIR
+    triage_path = source_dir / "triage" / f"{draft['opportunity']['source_post_id']}.json"
     if triage_path.exists() and _load_json(triage_path).get("decision") == "merged_duplicate":
         return None
-    draft = display_draft(DATA_DIR, draft)
-    raw_path = DATA_DIR / f"{draft['opportunity']['source_post_id']}.json"
-    if not raw_path.exists() or not source_is_current(DATA_DIR, draft["opportunity"]):
+    draft = display_draft(source_dir, draft)
+    raw_path = source_dir / f"{draft['opportunity']['source_post_id']}.json"
+    if not raw_path.exists() or not source_is_current(source_dir, draft["opportunity"]):
         return None
     raw = _load_json(raw_path)
-    approved = effective_approved_opportunity(draft)
+    approved = effective_approved_opportunity(draft, data_dir)
     effective_draft = {**draft, "opportunity": approved or draft["opportunity"]}
-    decision = assess(effective_draft, raw, DATA_DIR)
+    decision = assess(effective_draft, raw, source_dir, now)
     if decision["decision"] == "excluded":
         return None
     if set(decision["reasons"]) & {"unknown_or_disabled_organizer", "source_version_not_current",
