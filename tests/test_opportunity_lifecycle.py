@@ -143,6 +143,12 @@ def test_ocr_cli_reports_partial_results_and_nonzero(monkeypatch, capsys):
 
 @pytest.mark.parametrize("incomplete, ocr_status", [(True, "complete"), (False, "low_confidence"), (False, "failed"), (False, "empty")])
 def test_full_scanner_never_reports_partial_input_as_complete(monkeypatch, tmp_path, incomplete, ocr_status):
+    from src.opportunities import triage
+
+    process_local_post = triage.process_local_post
+    monkeypatch.setattr(triage, "process_local_post", lambda *args, **kwargs: process_local_post(
+        *args, now=datetime(2026, 10, 28, 12, tzinfo=timezone.utc), **kwargs
+    ))
     post = raw_post()
     post["media"] = [{"type": "image", "download_status": "downloaded", "sha256": "b" * 64}]
     if incomplete:

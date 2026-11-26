@@ -352,6 +352,7 @@ def export_market_bundle(
     query_config_version: str,
     run_status: str = 'partial',
     contracts_dir: Path | None = None,
+    collection_window: tuple[str, str] | None = None,
 ) -> Path:
     """Write a validated, description-free contract bundle and reference statistics."""
     if run_status not in {'complete', 'partial'}:
@@ -370,6 +371,8 @@ def export_market_bundle(
         _timestamp_text(_utc_datetime(record.get('last_seen_at') or record.get('collected_at_utc')))
         for record in records
     ])
+    if collection_window is not None:
+        collected_from, collected_to = collection_window
     posting_from, posting_to = _date_range([job['posted_date'] for job in market_jobs])
     resources_dir = Path(__file__).resolve().parents[1] / 'resources'
     courses = json.loads((resources_dir / 'courses.json').read_text(encoding='utf-8'))

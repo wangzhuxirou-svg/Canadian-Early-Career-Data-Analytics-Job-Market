@@ -8,7 +8,9 @@ import pytest
 
 from src.export_bundle import (
     BundleValidationError,
+    _candidate_digest,
     _provenance,
+    _verify_checksums,
     _write_checksums,
     _write_package_files,
     build_package,
@@ -193,32 +195,86 @@ def test_legacy_manifest_upgrade_is_explicit_and_preserves_market_dates(tmp_path
 
 
 def test_publication_requires_complete_market_data_and_human_attestation(tmp_path):
+    from config.settings import SEARCH_QUERIES
+
     base = copy.deepcopy(read_json(FIXTURES / "valid_bundle.json"))
     base["opportunities"] = []
     base["organizers"] = []
+    base["manifest"]["query_config_version"] = "jsearch-role-career-matrix-v1"
+    for dataset, field in (
+        ("market_jobs", "source_url"), ("courses", "official_url"), ("resources", "source_url")
+    ):
+        for row in base[dataset]:
+            row[field] = "https://release-gate-fixture.utoronto.ca/sample"
     market_package = write_base_package(tmp_path / "market", base)
     resources = tmp_path / "resources"
     resources.mkdir()
     (resources / "organizers.json").write_text("[]", encoding="utf-8")
     write_reference_files(resources, base)
+    sample_count = len(base["market_jobs"])
+    evidence = {
+        "data_mode": "real",  # Exercise the positive gate using fixture-only evidence.
+        "market": {
+            "run_id": "test-checkpoint",
+            "query_config_version": "jsearch-role-career-matrix-v1",
+            "collected_from": base["manifest"]["collected_from"],
+            "collected_to": base["manifest"]["collected_to"],
+            "usage_ref": "test-usage-record",
+            "raw_rows": sample_count,
+            "unique_source_jobs": sample_count,
+            "queries": [
+                {
+                    "role_id": task["role_family"], "career_level": task["search_level"],
+                    "status": "verified_publishable" if index == 0 else "checked_no_valid_results",
+                    "attempts": 1, "result_count": sample_count if index == 0 else 0,
+                }
+                for index, task in enumerate(SEARCH_QUERIES)
+            ],
+        },
+        "sources": [
+            {
+                "source_id": dataset, "dataset": dataset,
+                "source_url": "https://release-gate-fixture.utoronto.ca/sample",
+                "status": "verified_publishable", "checked_at": "2026-10-26T16:00:00Z",
+                "record_ids": [item[id_field] for item in base[dataset]],
+                "usage_ref": "test-usage-record",
+            }
+            for dataset, id_field in (("courses", "course_id"), ("resources", "resource_id"))
+        ] + [{
+            "source_id": "opportunities", "dataset": "opportunities",
+            "source_url": "https://release-gate-fixture.utoronto.ca/sample",
+            "status": "checked_no_valid_results", "checked_at": "2026-10-26T16:00:00Z",
+            "record_ids": [], "usage_ref": None,
+        }],
+    }
+    evidence_path = tmp_path / "release-evidence.json"
+    evidence_path.write_text(json.dumps(evidence), encoding="utf-8")
     package_dir = build_package(
         market_package,
         tmp_path / "candidate",
         dataset_version="1.2.3",
         data_dir=tmp_path / "empty-data",
         resources_dir=resources,
+        release_evidence_path=evidence_path,
     )
+    with pytest.raises(BundleValidationError, match="release_attestation.json"):
+        validate_package(package_dir, for_publication=True)
+
+    checksums = _verify_checksums(package_dir)
     attestation = tmp_path / "attestation.json"
     attestation.write_text(
         json.dumps(
             {
                 "dataset_version": "1.2.3",
+                "candidate_sha256": _candidate_digest(checksums),
                 "reviewer": "Reviewer",
+                "approval_ref": "test-approval",
                 "confirmed_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "confirmations": {
                     "role_classifications": True,
                     "course_evidence": True,
                     "opportunity_dates": True,
+                    "sources_and_usage": True,
                 },
             }
         ),
@@ -229,6 +285,28 @@ def test_publication_requires_complete_market_data_and_human_attestation(tmp_pat
     )
     assert (published / "release_attestation.json").is_file()
     validate_package(published, for_publication=True, require_provenance=True)
+    assert _candidate_digest(_verify_checksums(published)) == _candidate_digest(checksums)
+
+    released_evidence = package_dir / "release_evidence.json"
+    approved_bytes = released_evidence.read_bytes()
+    changed = copy.deepcopy(evidence)
+    changed["market"]["usage_ref"] = "changed-usage-record"
+    released_evidence.write_text(json.dumps(changed), encoding="utf-8")
+    _write_checksums(package_dir)
+    with pytest.raises(BundleValidationError, match="candidate_sha256"):
+        validate_package(package_dir, for_publication=True, attestation_path=attestation)
+    changed["data_mode"] = "synthetic"
+    released_evidence.write_text(json.dumps(changed), encoding="utf-8")
+    _write_checksums(package_dir)
+    with pytest.raises(BundleValidationError, match="Synthetic"):
+        validate_package(package_dir, for_publication=True, attestation_path=attestation)
+    released_evidence.write_bytes(approved_bytes)
+    _write_checksums(package_dir)
+    extra = package_dir / "unlisted.txt"
+    extra.write_text("Unlisted", encoding="utf-8")
+    with pytest.raises(BundleValidationError, match="unexpected files"):
+        validate_package(package_dir, for_publication=True, attestation_path=attestation)
+    extra.unlink()
 
     partial = copy.deepcopy(base)
     partial["manifest"]["run_status"] = "partial"
@@ -243,6 +321,13 @@ def test_publication_requires_complete_market_data_and_human_attestation(tmp_pat
     with pytest.raises(BundleValidationError, match="not complete"):
         publish_package(candidate, tmp_path / "blocked", attestation)
     assert not (tmp_path / "blocked").exists()
+
+    legacy = build_package(
+        market_package, tmp_path / "legacy-candidate", dataset_version="1.2.5",
+        data_dir=tmp_path / "empty-data", resources_dir=resources,
+    )
+    with pytest.raises(BundleValidationError, match="schema version 2.0.0"):
+        publish_package(legacy, tmp_path / "legacy-publish", attestation)
 
 
 @pytest.mark.parametrize("human", [False, True])

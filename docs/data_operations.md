@@ -1,5 +1,97 @@
 # D7 data package operations
 
+## Formal release
+
+The production contract is `2.0.0`. It uses the merged D7 payload shape,
+production schema overlays, and two release evidence documents. The `1.0.0`
+website baseline and `1.1.0` integration packages remain suitable for their
+original versioned readers. Older incomplete market runs, including the
+archived cumulative data, cannot authorize production.
+
+### Authorized collection
+
+Run in the controlled environment that holds the authorized JSearch
+credential, existing request ledger, and actual usage/budget evidence.
+See [data collection](data_collection.md) for the 24-task matrix and
+the 150-attempt monthly budget including 30 retry attempts. Confirm the
+account balance and provider terms before the first request, and keep a single
+active collector on the existing ledger. Set `JSEARCH_API_KEY` through the
+approved secret store or session environment.
+
+The configured transport uses the direct JSearch `/search-v2` API and
+`x-api-key` header. If the existing approved plan uses another gateway,
+verify the corresponding endpoint and credential before collecting. The
+matrix reads the first response page per task. [JSearch API](https://www.openwebninja.com/api/jsearch)
+
+```powershell
+python -m src.formal_collection --collect --usage-ref "<source-usage-record>"
+# Resume the same incomplete round using the same ledger and identity.
+python -m src.formal_collection --collect --run-id "<run-id>" --usage-ref "<source-usage-record>"
+# Recover an already completed checkpoint without a provider request.
+python -m src.formal_collection --from-completed-run --run-id "<run-id>" --usage-ref "<source-usage-record>"
+```
+
+The command saves raw pages and attempt details only in ignored
+`data/history/`. Malformed/error response payloads do not count as empty
+successes. The release input under `data/history/formal-runs/<run-id>/`
+appears after the entire matrix completes. `market-coverage.json` records
+query status, attempts, response rows and deduplicated counts.
+`role-review-sample.json` lists up to ten eligible postings per role with
+empty decision and basis fields for manual review. Empty roles stay explicit.
+The underlying ledger records outcomes, HTTP status, retries and checkpoint
+state for unsuccessful rounds. The resulting market window describes this
+round rather than the existing cumulative historical snapshot.
+
+### Candidate and approval
+
+Create a release-evidence input in controlled storage using
+`../contracts/schemas/release-evidence.schema.json`. Copy the completed
+`market-coverage.json` object into `market`, set `data_mode` to the correct
+mode, and inventory actual course, resource, organizer, and opportunity source
+decisions under `sources`. Only publish records with checked sources and an
+applicable permission reference. Use `--resources-dir` for a reviewed
+catalog export, and preserve original verification timestamps until rechecked.
+An official event import is optional and uses `--official-opportunities`;
+see [source recheck](source-recheck-20261126.md) for the explicitly unsigned
+review examples. A zero-opportunity release must have an actually checked
+opportunity source. Instagram remains subject to its separate access scope.
+
+```powershell
+python -m src.export_bundle build `
+  --market-package 'data/history/formal-runs/<run-id>/market' `
+  --output 'data/history/d7-candidate-<version>' `
+  --dataset-version '<version>' `
+  --release-evidence 'data/history/release-evidence-<version>.json'
+python -m src.export_bundle validate --package 'data/history/d7-candidate-<version>'
+```
+
+The command reports `candidate_sha256`. A human reviewer verifies the
+source license and public scope, role sample, course/resource basis, event
+dates, and exact package version and digest against the private evidence.
+Record the approval in a protected system, then copy the unsigned template
+outside the candidate and fill in the digest, reviewer, UTC time, approval
+reference, and confirmations. Never create a production approval from a
+fixture or approve by merely changing a version value. In the website release
+PR, pin the same version and candidate digest against that protected record.
+
+```powershell
+python -m src.export_bundle validate `
+  --package 'data/history/d7-candidate-<version>' --for-publication `
+  --attestation 'data/history/release-attestation-<version>.json'
+python -m src.export_bundle publish `
+  --package 'data/history/d7-candidate-<version>' `
+  --attestation 'data/history/release-attestation-<version>.json' `
+  --output 'data/history/d7-published-<version>'
+python -m src.export_bundle validate --package 'data/history/d7-published-<version>' --for-publication
+```
+
+Hand off the new immutable package through the approved private channel.
+Review materials and approval references stay controlled. Confirm a manual
+website update and deliberately rejected update first. Keep the last approved
+site/package pair for rollback. Enable a scheduled candidate collection only
+after that recovery check and actual account authorization. Scheduling
+collection does not enable automatic publication or renew the human approval.
+
 ## Offline package build
 
 `src.export_bundle` assembles an offline package from an already saved market
@@ -70,13 +162,13 @@ validator checks the statistics schema and recomputes the counts and raw rates
 from the bundled market jobs. With a zero denominator, rates remain JSON
 `null`. The legacy D4 input can still use its bundle-only checksum list.
 
-## Publication gate
+## Integration and formal publication gate
 
 A contract-valid candidate is not necessarily releasable. Publication requires
-a complete reused market dataset, current eligible opportunities, verified organizers, valid package
-checksums, and a human attestation tied to the exact dataset version. Start from
+the formal 2.0 candidate, a verified complete market run, current eligible opportunities, verified organizers,
+valid package checksums, and a human attestation tied to the exact dataset digest. Start from
 `release_attestation.template.json`, fill in the reviewer and UTC confirmation
-time, and set all three confirmations to `true` only after review:
+time, and set all four confirmations to `true` only after review:
 
 - `role_classifications`: confirm the eight role families and classification
   evidence. The archived sample has no real positive product-analyst example.
@@ -84,6 +176,8 @@ time, and set all three confirmations to `true` only after review:
   course titles alone are insufficient.
 - `opportunity_dates`: check the source posts and confirm that published event
   and deadline dates are still current.
+- `sources_and_usage`: inspect the source index and authorization for the
+  actual public fields and exact candidate.
 
 ```powershell
 python -m src.export_bundle validate `

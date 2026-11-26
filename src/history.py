@@ -345,6 +345,7 @@ class CollectionHistory:
 
     def complete_run(self) -> None:
         self.checkpoint['status'] = 'complete'
+        self.checkpoint['completed_at'] = self._now_text()
         self._save_checkpoint()
         self._append_event({
             'event': 'run_completed',
@@ -353,6 +354,16 @@ class CollectionHistory:
             'run_id': self.run_id,
             'query_count': len(self.checkpoint['query_keys']),
         })
+
+    def restore_completed_run(self, run_id: str) -> None:
+        """Load an existing completed run for offline processing or export."""
+        if not re.fullmatch(r'[A-Za-z0-9_-]+', run_id):
+            raise ValueError('Invalid collection run ID.')
+        checkpoint = json.loads(self._checkpoint_path(run_id).read_text(encoding='utf-8'))
+        if checkpoint.get('run_id') != run_id or checkpoint.get('status') != 'complete':
+            raise ValueError('The selected collection run is incomplete.')
+        self.run_id = run_id
+        self.checkpoint = checkpoint
 
     def load_run_jobs(self) -> list[dict]:
         jobs = []
