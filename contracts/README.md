@@ -7,10 +7,15 @@ real market or club data.
 
 ## Version and validation
 
-- Production contract version: `2.0.0` (JSON Schema Draft 2020-12). Use the
-  shared `schemas/` closure with `production/2.0.0/manifest.schema.json`
-  **replacing** `schemas/manifest.schema.json` in the schema registry. The
-  replacement has the same schema ID and fixes the version to `2.0.0`.
+- Production contract version: `2.0.0` (JSON Schema Draft 2020-12). Load the
+  shared `schemas/` closure, replacing matching schema files with the
+  `*.schema.json` overlays under `production/2.0.0/`. Overlays retain the
+  schema IDs so package references resolve to the chosen version.
+- A production organizer can use an official HTTPS profile and a null
+  Instagram username. `production/2.0.0/official_organizer.json` is a synthetic
+  example. Official event sources use a stable occurrence identifier in the
+  existing `source_post_id` and `source_post_ids` fields. The provenance
+  identifies `official` sources separately from Instagram.
 - The original `1.0.0` contract remains available at `b828553f91cf6cd6ae5b0766e7fbf4c6b1822535`.
   The default `schemas/manifest.schema.json` and `fixtures/` retain the merged
   D7 `1.1.0` integration format. D7 made `organizers` and four opportunity
