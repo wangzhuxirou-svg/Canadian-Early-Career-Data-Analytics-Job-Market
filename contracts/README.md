@@ -7,7 +7,17 @@ real market or club data.
 
 ## Version and validation
 
-- Contract version: `1.1.0` (JSON Schema Draft 2020-12).
+- Production contract version: `2.0.0` (JSON Schema Draft 2020-12). Use the
+  shared `schemas/` closure with `production/2.0.0/manifest.schema.json`
+  **replacing** `schemas/manifest.schema.json` in the schema registry. The
+  replacement has the same schema ID and fixes the version to `2.0.0`.
+- The original `1.0.0` contract remains available at `b828553f91cf6cd6ae5b0766e7fbf4c6b1822535`.
+  The default `schemas/manifest.schema.json` and `fixtures/` retain the merged
+  D7 `1.1.0` integration format. D7 made `organizers` and four opportunity
+  fields required, and the v1.0 schemas reject extra fields. These are breaking
+  changes under the frozen two-person plan. Use separate versioned readers and
+  keep existing canonical IDs and statistics. A version label alone cannot
+  convert an older package to production.
 - Breaking field, meaning, or enum changes require a new major version and
   coordinated changes on both sides. New optional fields may use a minor
   version; corrections that do not change accepted data may use a patch version.
@@ -56,6 +66,48 @@ so clients can resolve display names and profile links. Do not put user
 records, credentials, API keys, Instagram session state, raw descriptions,
 downloaded media, or private review data in that package. Market descriptions
 are represented only by `description_status` and `description_analyzable`.
+
+## Formal D7 package handoff
+
+A 2.0.0 candidate adds `release_evidence.json`, validated against
+`schemas/release-evidence.schema.json`. Its market evidence describes one
+actual run of `jsearch-role-career-matrix-v1`: the 24 unique role and level
+pairs, positive request attempts for each completed query, total response
+rows, and distinct source job IDs. A successful query with zero returns uses
+`checked_no_valid_results`; a successful positive query uses
+`verified_publishable` for coverage. Pending or failed queries never count as
+complete. The collection window describes the provider request run in UTC,
+independently of the job posting window and package build time. The manifest
+and evidence use the same collection window and query version. Human
+classification and permission are separate requirements.
+
+The source index records course, resource, organizer, and opportunity sources.
+`not_checked` has a null check time; `collection_failed` and
+`checked_no_valid_results` record a check time and no published IDs.
+`verified_publishable` records a check time and relevant published record IDs.
+Every public catalog record has at least one corresponding verified source
+with a nonempty usage reference. A published opportunity must have a usable
+current source and verified organizer. Empty opportunities are valid when
+the source coverage and actual outcomes are recorded. Evidence references
+identify review or usage-permission records accessible to the release owners.
+
+A published 2.0.0 package adds `release_attestation.json`, validated against
+`schemas/release-attestation.schema.json`. Confirmations bind to the exact
+candidate, including its source and permission evidence. Compute
+`candidate_sha256` from the verified SHA-256 entries for all candidate files,
+each rendered `<lowercase hex><two spaces><filename><LF>` in ascending ASCII
+filename order. Hash these ASCII bytes with SHA-256. Exclude the publication
+attestation entry. The checksum ledger itself has no self-entry. This digest
+is unchanged by copying a candidate into a published package or by Windows
+line endings in the ledger. The unsigned template contains a blank digest
+to avoid a circular checksum.
+
+Verify the candidate digest against the protected approval record referenced
+by `approval_ref` and pin the version and digest in the website release
+change. An unsigned template, a synthetic fixture, or a reference to an
+unavailable permission or approval record cannot authorize release. Keep the
+full candidate and approval materials in the controlled handoff. Serving the
+site only requires the public, description-free payload.
 
 The `opportunity` schema retains the original singular `source_post_id` and
 `date_precision` fields for compatibility, while adding `source_post_ids`,
