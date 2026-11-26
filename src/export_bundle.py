@@ -8,8 +8,9 @@ import re
 import shutil
 import sys
 import tempfile
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 from referencing import Registry, Resource
@@ -23,6 +24,10 @@ RESOURCES_DIR = ROOT / "resources"
 DATA_DIR = ROOT / "data" / "opportunities"
 LOGGER = logging.getLogger("src.export_bundle")
 VERSION_PATTERN = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
+PRODUCTION_SCHEMA = "2.0.0"
+ONGOING_REVIEW_AGE = timedelta(days=30)
+RELEASE_EVIDENCE = "release_evidence.json"
+RELEASE_ATTESTATION = "release_attestation.json"
 BUNDLE_SIDECARS = {
     "manifest.json": "manifest",
     "market_jobs.json": "market_jobs",
@@ -67,6 +72,17 @@ def _schemas(contracts_dir: Path) -> tuple[dict, Registry]:
         for schema in schemas
     )
     return {schema["$id"].rsplit("/", 1)[-1]: schema for schema in schemas}, registry
+
+
+def _validate_document(value, schema_name: str, contracts_dir: Path) -> None:
+    schemas, registry = _schemas(contracts_dir)
+    try:
+        Draft202012Validator(
+            schemas[schema_name], registry=registry, format_checker=FormatChecker()
+        ).validate(value)
+    except ValidationError as error:
+        location = "/".join(map(str, error.absolute_path)) or "<root>"
+        raise BundleValidationError(f"{schema_name} validation failed at {location}: {error.message}") from error
 
 
 def _unique_values(items: list[dict], field: str, dataset: str) -> set[str]:
@@ -152,7 +168,17 @@ def validate_bundle(
     for_publication: bool = False,
 ) -> None:
     """Validate shared JSON Schemas plus package-wide uniqueness and references."""
-    schemas, registry = _schemas(Path(contracts_dir))
+    contracts_dir = Path(contracts_dir)
+    schemas, registry = _schemas(contracts_dir)
+    manifest = bundle.get("manifest") if isinstance(bundle, dict) else None
+    if isinstance(manifest, dict) and manifest.get("schema_version") == PRODUCTION_SCHEMA:
+        overlays = contracts_dir / "production" / PRODUCTION_SCHEMA
+        if not (overlays / "manifest.schema.json").is_file():
+            raise BundleValidationError("Production manifest schema is missing.")
+        for path in overlays.glob("*.schema.json"):
+            schema = _read_json(path)
+            schemas[path.name] = schema
+            registry = registry.with_resource(schema["$id"], Resource.from_contents(schema))
     for schema in schemas.values():
         Draft202012Validator.check_schema(schema)
     validator = Draft202012Validator(
@@ -246,8 +272,9 @@ def validate_bundle(
 
 
 def _verify_checksums(
-    package_dir: Path, required_files: frozenset[str] = frozenset({"bundle.json"})
-) -> None:
+    package_dir: Path, required_files: frozenset[str] = frozenset({"bundle.json"}),
+    *, exact: bool = False,
+) -> dict[str, str]:
     checksum_path = package_dir / "SHA256SUMS.txt"
     if checksum_path.is_symlink() or not checksum_path.is_file():
         raise BundleValidationError(f"Package checksum file is missing or unsafe: {checksum_path}.")
@@ -271,6 +298,11 @@ def _verify_checksums(
     missing = required_files - {filename for filename, _ in entries.values()}
     if missing:
         raise BundleValidationError(f"Package checksums do not cover: {', '.join(sorted(missing))}.")
+    if exact and (
+        {filename for filename, _ in entries.values()} != required_files
+        or {path.name for path in package_dir.iterdir()} != required_files | {"SHA256SUMS.txt"}
+    ):
+        raise BundleValidationError("Formal package contains unexpected files or checksum entries.")
     for filename, expected in entries.values():
         path = package_dir / filename
         if path.is_symlink() or path.resolve().parent != package_dir.resolve() or not path.is_file():
@@ -278,9 +310,131 @@ def _verify_checksums(
         actual = hashlib.sha256(path.read_bytes()).hexdigest()
         if actual != expected:
             raise BundleValidationError(f"Package checksum mismatch: {filename}.")
+    return {filename: digest for filename, digest in entries.values()}
 
 
-def _validate_provenance(bundle: dict, provenance: dict) -> None:
+def _candidate_digest(checksums: dict[str, str]) -> str:
+    ledger = "".join(
+        f"{checksums[name]}  {name}\n"
+        for name in sorted(checksums)
+        if name != RELEASE_ATTESTATION
+    )
+    return hashlib.sha256(ledger.encode("ascii")).hexdigest()
+
+
+def _public_source_url(value: str) -> bool:
+    try:
+        url = urlsplit(value)
+        host = url.hostname.removesuffix(".") if url.hostname else None
+        if host and re.fullmatch(r"[.0-9]+|[0-9a-f:]+", host):
+            return False  # Release evidence uses named source operators, never IP literals.
+    except ValueError:
+        return False
+    return bool(
+        url.scheme == "https"
+        and host
+        and "." in host
+        and not url.username
+        and not url.password
+        and not host.endswith((".example", ".test", ".invalid", ".localhost"))
+        and not any(host == reserved or host.endswith("." + reserved)
+                    for reserved in ("example.com", "example.org", "example.net"))
+    )
+
+
+def _validate_release_evidence(
+    bundle: dict, evidence: dict, contracts_dir: Path, *, for_publication: bool,
+) -> None:
+    from config.settings import SEARCH_QUERIES
+
+    _validate_document(evidence, "release-evidence.schema.json", contracts_dir)
+    manifest = bundle["manifest"]
+    market = evidence["market"]
+    for key in ("query_config_version", "collected_from", "collected_to"):
+        if market[key] != manifest[key]:
+            raise BundleValidationError(f"Market release evidence {key} differs from the manifest.")
+    matrix = {(task["role_family"], task["search_level"]) for task in SEARCH_QUERIES}
+    queries = market["queries"]
+    observed = {(row["role_id"], row["career_level"]) for row in queries}
+    if len(observed) != len(queries) or not observed <= matrix:
+        raise BundleValidationError("Market release evidence repeats or adds query matrix entries.")
+    for row in queries:
+        status, attempts, count = row["status"], row["attempts"], row["result_count"]
+        if status == "verified_publishable":
+            valid = attempts > 0 and count is not None and count > 0
+        elif status == "checked_no_valid_results":
+            valid = attempts > 0 and count == 0
+        elif status == "collection_failed":
+            valid = count is None
+        else:
+            valid = attempts == 0 and count is None
+        if not valid:
+            raise BundleValidationError("Market release evidence has inconsistent query status and counts.")
+    if (
+        market["raw_rows"] != sum(row["result_count"] or 0 for row in queries)
+        or market["unique_source_jobs"] > market["raw_rows"]
+    ):
+        raise BundleValidationError("Market release evidence has inconsistent raw or deduplicated counts.")
+
+    expected_ids = {
+        dataset: {row[id_field] for row in bundle[dataset]}
+        for dataset, id_field in (
+            ("courses", "course_id"), ("resources", "resource_id"),
+            ("organizers", "organizer_id"), ("opportunities", "opportunity_id"),
+        )
+    }
+    covered = {dataset: set() for dataset in expected_ids}
+    inspected_opportunity_sources = False
+    latest = _parse_timestamp(manifest["generated_at"], "manifest.generated_at")
+    sources = evidence["sources"]
+    _unique_values(sources, "source_id", "Release sources")
+    for row in sources:
+        dataset, status = row["dataset"], row["status"]
+        checked_at, record_ids = row["checked_at"], set(row["record_ids"])
+        if (status == "not_checked") != (checked_at is None):
+            raise BundleValidationError("Release source check time does not match its status.")
+        if checked_at and _parse_timestamp(checked_at, "source.checked_at") > latest:
+            raise BundleValidationError("Release source check time falls after candidate build.")
+        if (status == "verified_publishable") != bool(record_ids) or not record_ids <= expected_ids[dataset]:
+            raise BundleValidationError("Release source lists invalid or missing published record IDs.")
+        if row["usage_ref"] and _public_source_url(row["source_url"]):
+            covered[dataset].update(record_ids)
+        if dataset == "opportunities" and status in {"verified_publishable", "checked_no_valid_results"}:
+            inspected_opportunity_sources |= _public_source_url(row["source_url"])
+    if not for_publication:
+        return
+    if evidence["data_mode"] != "real":
+        raise BundleValidationError("Synthetic data cannot be published.")
+    if (
+        observed != matrix
+        or any(row["result_count"] is None for row in queries)
+        or market["query_config_version"] != "jsearch-role-career-matrix-v1"
+        or not market["collected_from"] or not market["collected_to"]
+        or _parse_timestamp(market["collected_to"], "market.collected_to") > latest
+        or not market["usage_ref"]
+        or not 0 < manifest["sample_count"] <= market["unique_source_jobs"]
+    ):
+        raise BundleValidationError("Market release evidence is incomplete for publication.")
+    if not expected_ids["courses"] or not expected_ids["resources"] or not inspected_opportunity_sources:
+        raise BundleValidationError("Publication requires course, resource, and checked opportunity sources.")
+    if any(covered[dataset] != ids for dataset, ids in expected_ids.items()):
+        raise BundleValidationError("Publication requires a verified source and usage reference for every public record.")
+    if any(row["source"] != "jsearch" for row in bundle["market_jobs"]):
+        raise BundleValidationError("Market records must match the JSearch collection source.")
+    for dataset, field in (
+        ("market_jobs", "source_url"), ("courses", "official_url"),
+        ("resources", "source_url"), ("organizers", "profile_url"), ("opportunities", "source_url"),
+        ("opportunities", "registration_url"),
+    ):
+        if any(
+            not _public_source_url(row[field] or "")
+            for row in bundle[dataset]
+            if field not in {"registration_url", "source_url"} or row[field] is not None
+        ):
+            raise BundleValidationError(f"Publication requires real HTTPS source URLs for {dataset}.")
+
+
+def _validate_provenance(bundle: dict, provenance: dict, *, for_publication: bool = False) -> None:
     if not isinstance(provenance, dict):
         raise BundleValidationError("Dataset provenance must be an object.")
     if provenance.get("generated_at") != bundle["manifest"]["generated_at"]:
@@ -301,6 +455,7 @@ def _validate_provenance(bundle: dict, provenance: dict) -> None:
     opportunities = datasets.get("opportunities", {})
     if not isinstance(opportunities, dict):
         raise BundleValidationError("Opportunity provenance must be an object.")
+    production = bundle["manifest"]["schema_version"] == PRODUCTION_SCHEMA
     collection_rows = opportunities.get("records")
     if not isinstance(collection_rows, list):
         raise BundleValidationError("Opportunity collection provenance must be a list.")
@@ -314,6 +469,7 @@ def _validate_provenance(bundle: dict, provenance: dict) -> None:
     if by_opportunity != set(expected_opportunities):
         raise BundleValidationError("Opportunity provenance does not match approved opportunities.")
     all_first_seen, all_last_seen = [], []
+    source_types = set()
     for row in collection_rows:
         if not isinstance(row, dict):
             raise BundleValidationError("Opportunity provenance records must be objects.")
@@ -322,8 +478,16 @@ def _validate_provenance(bundle: dict, provenance: dict) -> None:
             "auto_candidate", "human_approved"
         }:
             raise BundleValidationError("Opportunity provenance must identify automatic or human eligibility.")
+        if for_publication and production and eligibility["decision"] != "human_approved":
+            raise BundleValidationError("Each production opportunity requires current human approval.")
         opportunity = next(item for item in bundle["opportunities"]
                            if item["opportunity_id"] == row["opportunity_id"])
+        source_type = row.get("source", "instagram")
+        if source_type != "instagram" and (
+            not production or source_type != "official" or eligibility["decision"] != "human_approved"
+        ):
+            raise BundleValidationError("Official opportunity provenance requires human approval.")
+        source_types.add(source_type)
         if eligibility.get("content_revision") != opportunity["content_revision"]:
             raise BundleValidationError("Opportunity eligibility revision does not match the bundle.")
         _parse_timestamp(eligibility.get("evaluated_at"), "eligibility.evaluated_at")
@@ -349,6 +513,9 @@ def _validate_provenance(bundle: dict, provenance: dict) -> None:
     expected_to = max(all_last_seen, default=None)
     if opportunities.get("collected_from") != expected_from or opportunities.get("collected_to") != expected_to:
         raise BundleValidationError("Opportunity dataset collection range is incorrect.")
+    expected_source = "mixed" if len(source_types) > 1 else next(iter(source_types), "instagram")
+    if opportunities.get("source") != expected_source:
+        raise BundleValidationError("Opportunity dataset source disagrees with record provenance.")
 
     for dataset_name, id_field, bundle_key in (
         ("courses", "course_id", "courses"),
@@ -406,31 +573,63 @@ def validate_package(
     *,
     for_publication: bool = False,
     require_provenance: bool = True,
+    attestation_path: Path | None = None,
 ) -> dict:
     """Validate a D7 package. The legacy keyword is retained for callers."""
     package_dir = Path(package_dir)
     required_files = D7_CHECKSUM_FILES
-    attestation = package_dir / "release_attestation.json"
+    attestation = package_dir / RELEASE_ATTESTATION
     if attestation.exists() or attestation.is_symlink():
         required_files = required_files | {attestation.name}
     _verify_checksums(package_dir, required_files)
     bundle = _read_json(package_dir / "bundle.json")
     validate_bundle(bundle, contracts_dir, for_publication=for_publication)
+    production = bundle["manifest"]["schema_version"] == PRODUCTION_SCHEMA
+    if production:
+        required_files |= {RELEASE_EVIDENCE}
+        checksums = _verify_checksums(package_dir, required_files, exact=True)
+        _validate_release_evidence(
+            bundle, _read_json(package_dir / RELEASE_EVIDENCE), contracts_dir,
+            for_publication=for_publication,
+        )
     for filename, key in BUNDLE_SIDECARS.items():
         if _read_json(package_dir / filename) != bundle[key]:
             raise BundleValidationError(f"{filename} does not match bundle.json.")
     _validate_statistics(
         _read_json(package_dir / "reference_statistics.json"), bundle["market_jobs"], contracts_dir
     )
-    _validate_provenance(bundle, _read_json(package_dir / "dataset_provenance.json"))
+    _validate_provenance(
+        bundle, _read_json(package_dir / "dataset_provenance.json"), for_publication=for_publication,
+    )
     if for_publication:
         from src.opportunities.temporal import expiration_reason
+        now = datetime.now(timezone.utc)
         for opportunity in bundle["opportunities"]:
-            expired = expiration_reason(opportunity)
+            expired = expiration_reason(opportunity, now)
             if expired:
                 raise BundleValidationError(
                     f"Opportunity {opportunity['opportunity_id']} contains an expired date: {expired}."
                 )
+            if production:
+                verified = _parse_timestamp(opportunity["verified_at"], "opportunity.verified_at")
+                updated_at = opportunity["source_updated_at"]
+                if (
+                    verified > now
+                    or (updated_at and _parse_timestamp(updated_at, "opportunity.source_updated_at") > verified)
+                    or (opportunity["kind"] == "ongoing_opportunity" and now - verified > ONGOING_REVIEW_AGE)
+                ):
+                    raise BundleValidationError(
+                        f"Opportunity {opportunity['opportunity_id']} does not have a current verification."
+                    )
+        if not production:
+            raise BundleValidationError("Publication requires the formal schema version 2.0.0.")
+    if production and (for_publication or attestation.exists()):
+        if attestation.exists() and attestation_path is not None:
+            raise BundleValidationError("Validate an embedded attestation without an external replacement.")
+        _validate_attestation(
+            attestation_path or attestation, bundle["manifest"], _candidate_digest(checksums),
+            contracts_dir,
+        )
     return bundle
 
 
@@ -512,6 +711,7 @@ def _provenance(bundle: dict, opportunity_collections: list[dict]) -> dict:
         for record in opportunity_collections
         for post in record["source_post_ids"]
     ]
+    opportunity_sources = {record.get("source", "instagram") for record in opportunity_collections}
     return {
         "generated_at": manifest["generated_at"],
         "datasets": {
@@ -521,7 +721,7 @@ def _provenance(bundle: dict, opportunity_collections: list[dict]) -> dict:
                 "collected_to": manifest["collected_to"],
             },
             "opportunities": {
-                "source": "instagram",
+                "source": "mixed" if len(opportunity_sources) > 1 else next(iter(opportunity_sources), "instagram"),
                 "collected_from": min(
                     (post["first_seen_at"] for post in posts), default=None
                 ),
@@ -567,7 +767,9 @@ def _write_checksums(package_dir: Path) -> None:
     (package_dir / "SHA256SUMS.txt").write_text("\n".join(checksums) + "\n", encoding="ascii")
 
 
-def _write_package_files(package_dir: Path, bundle: dict, provenance: dict) -> None:
+def _write_package_files(
+    package_dir: Path, bundle: dict, provenance: dict, release_evidence: dict | None = None,
+) -> None:
     files = {
         "bundle.json": bundle,
         **{filename: bundle[key] for filename, key in BUNDLE_SIDECARS.items()},
@@ -580,6 +782,11 @@ def _write_package_files(package_dir: Path, bundle: dict, provenance: dict) -> N
             "confirmations": {name: False for name in ATTESTATION_CHECKS},
         },
     }
+    if release_evidence is not None:
+        files[RELEASE_EVIDENCE] = release_evidence
+        template = files["release_attestation.template.json"]
+        template.update({"candidate_sha256": "", "approval_ref": ""})
+        template["confirmations"]["sources_and_usage"] = False
     for filename, value in files.items():
         (package_dir / filename).write_text(
             json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False) + "\n",
@@ -641,6 +848,8 @@ def build_package(
     contracts_dir: Path = CONTRACTS_DIR,
     resources_dir: Path = RESOURCES_DIR,
     upgrade_legacy_manifest: bool = False,
+    release_evidence_path: Path | None = None,
+    official_opportunities_path: Path | None = None,
 ) -> Path:
     """Create an offline release candidate from a validated market package."""
     if not VERSION_PATTERN.fullmatch(dataset_version):
@@ -661,11 +870,23 @@ def build_package(
     bundle["manifest"]["generated_at"] = (
         datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
     )
+    release_evidence = None
+    if release_evidence_path is not None:
+        release_evidence = _read_json(Path(release_evidence_path))
+        bundle["manifest"]["schema_version"] = PRODUCTION_SCHEMA
     resources_dir = Path(resources_dir)
     organizers = _read_json(resources_dir / "organizers.json")
     courses = _read_json(resources_dir / "courses.json")
     learning_resources = _read_json(resources_dir / "learning_resources.json")
     opportunities, collection_rows = _current_opportunities(Path(data_dir), organizers)
+    if official_opportunities_path is not None:
+        if release_evidence_path is None:
+            raise BundleValidationError("Official opportunities require formal release evidence.")
+        from src.official_opportunities import load_official_opportunities
+        official_organizers, official, official_collections = load_official_opportunities(official_opportunities_path)
+        organizers.extend(official_organizers)
+        opportunities.extend(official)
+        collection_rows.extend(official_collections)
     referenced_organizers = {item["organizer_id"] for item in opportunities}
     bundle["organizers"] = [
         organizer
@@ -692,7 +913,7 @@ def build_package(
     with tempfile.TemporaryDirectory(prefix=f".{output_dir.name}-", dir=output_dir.parent) as temp:
         staged = Path(temp) / "package"
         staged.mkdir()
-        _write_package_files(staged, bundle, provenance)
+        _write_package_files(staged, bundle, provenance, release_evidence)
         validate_package(staged, contracts_dir, require_provenance=True)
         try:
             staged.rename(output_dir)
@@ -708,25 +929,18 @@ def build_package(
     return output_dir
 
 
-def _validate_attestation(path: Path, dataset_version: str, generated_at: str) -> None:
+def _validate_attestation(path: Path, manifest: dict, digest: str, contracts_dir: Path) -> None:
     attestation = _read_json(path)
-    if attestation.get("dataset_version") != dataset_version:
+    _validate_document(attestation, "release-attestation.schema.json", contracts_dir)
+    if attestation["dataset_version"] != manifest["dataset_version"]:
         raise BundleValidationError("Attestation dataset_version does not match the package.")
-    if not isinstance(attestation.get("reviewer"), str) or not attestation["reviewer"].strip():
-        raise BundleValidationError("Attestation must identify the human reviewer.")
-    confirmed_at = _parse_timestamp(attestation.get("confirmed_at"), "attestation.confirmed_at")
+    if attestation["candidate_sha256"] != digest:
+        raise BundleValidationError("Attestation candidate_sha256 does not match package checksums.")
+    confirmed_at = _parse_timestamp(attestation["confirmed_at"], "attestation.confirmed_at")
     if confirmed_at > datetime.now(timezone.utc):
         raise BundleValidationError("Attestation confirmed_at cannot be in the future.")
-    if confirmed_at < _parse_timestamp(generated_at, "manifest.generated_at"):
+    if confirmed_at < _parse_timestamp(manifest["generated_at"], "manifest.generated_at"):
         raise BundleValidationError("Attestation must be made after the candidate package was built.")
-    confirmations = attestation.get("confirmations")
-    if not isinstance(confirmations, dict) or any(
-        confirmations.get(name) is not True for name in ATTESTATION_CHECKS
-    ):
-        raise BundleValidationError(
-            "Publication requires human confirmation of role classifications, "
-            "course evidence, and opportunity dates."
-        )
 
 
 def publish_package(
@@ -735,16 +949,11 @@ def publish_package(
     attestation_path: Path,
     contracts_dir: Path = CONTRACTS_DIR,
 ) -> Path:
-    bundle = validate_package(
+    validate_package(
         package_dir,
         contracts_dir,
         for_publication=True,
-        require_provenance=True,
-    )
-    _validate_attestation(
-        Path(attestation_path),
-        bundle["manifest"]["dataset_version"],
-        bundle["manifest"]["generated_at"],
+        attestation_path=Path(attestation_path),
     )
     output_dir = Path(output_dir)
     _ensure_disjoint_paths(
@@ -758,7 +967,7 @@ def publish_package(
     with tempfile.TemporaryDirectory(prefix=f".{output_dir.name}-", dir=output_dir.parent) as temp:
         staged = Path(temp) / "package"
         shutil.copytree(package_dir, staged)
-        shutil.copy2(attestation_path, staged / "release_attestation.json")
+        shutil.copy2(attestation_path, staged / RELEASE_ATTESTATION)
         _write_checksums(staged)
         validate_package(
             staged,
@@ -795,6 +1004,9 @@ def main(argv: list[str] | None = None) -> int:
     build_parser.add_argument("--output", type=Path, required=True)
     build_parser.add_argument("--dataset-version", required=True)
     build_parser.add_argument("--data-dir", type=Path, default=DATA_DIR)
+    build_parser.add_argument("--resources-dir", type=Path, default=RESOURCES_DIR)
+    build_parser.add_argument("--release-evidence", type=Path)
+    build_parser.add_argument("--official-opportunities", type=Path)
     build_parser.add_argument(
         "--upgrade-legacy-manifest",
         action="store_true",
@@ -828,7 +1040,10 @@ def main(argv: list[str] | None = None) -> int:
                 arguments.output,
                 dataset_version=arguments.dataset_version,
                 data_dir=arguments.data_dir,
+                resources_dir=arguments.resources_dir,
                 upgrade_legacy_manifest=arguments.upgrade_legacy_manifest,
+                release_evidence_path=arguments.release_evidence,
+                official_opportunities_path=arguments.official_opportunities,
             )
             bundle = validate_package(result)
             print(
@@ -839,29 +1054,26 @@ def main(argv: list[str] | None = None) -> int:
                         "market_status": bundle["manifest"]["run_status"],
                         "market_complete": bundle["manifest"]["run_status"] == "complete",
                         "publication_requires_attestation": True,
+                        "candidate_sha256": _candidate_digest(_verify_checksums(result)),
                     },
                     ensure_ascii=False,
                 )
             )
             return 0
         if arguments.command == "validate":
-            bundle = validate_package(arguments.package, for_publication=arguments.for_publication)
-            if arguments.for_publication:
-                if arguments.attestation is None:
-                    raise BundleValidationError(
-                        "--for-publication requires the version-matched human --attestation."
-                    )
-                _validate_attestation(
-                    arguments.attestation,
-                    bundle["manifest"]["dataset_version"],
-                    bundle["manifest"]["generated_at"],
-                )
+            if arguments.attestation and not arguments.for_publication:
+                raise BundleValidationError("--attestation requires --for-publication.")
+            bundle = validate_package(
+                arguments.package, for_publication=arguments.for_publication,
+                attestation_path=arguments.attestation,
+            )
             print(
                 json.dumps(
                     {
                         "status": "valid",
                         "dataset_version": bundle["manifest"]["dataset_version"],
                         "market_status": bundle["manifest"]["run_status"],
+                        "candidate_sha256": _candidate_digest(_verify_checksums(arguments.package)),
                     }
                 )
             )

@@ -1,0 +1,120 @@
+{
+  "organizers": [
+    {
+      "organizer_id": "utsc_aacc",
+      "name": "UTSC Academic Advising & Career Centre",
+      "username": null,
+      "profile_url": "https://www.utsc.utoronto.ca/aacc/",
+      "enabled": true,
+      "priority": 1,
+      "last_verified_at": null
+    }
+  ],
+  "opportunities": [
+    {
+      "opportunity": {
+        "opportunity_id": "utsc-aacc-career-cravings-2026-12-03",
+        "title": "Crunch into Your Summer Job and Beyond",
+        "kind": "event",
+        "organizer_id": "utsc_aacc",
+        "source_post_id": null,
+        "source_post_ids": [],
+        "responsibilities": null,
+        "compensation_status": "not_stated",
+        "ccr_status": "not_stated",
+        "topic_ids": [
+          "other"
+        ],
+        "skill_ids": [],
+        "beginner_level": "unknown",
+        "format": "in_person",
+        "deadline_at": null,
+        "timezone": "America/Toronto",
+        "date_precision": "datetime",
+        "deadline_date": null,
+        "start_precision": "datetime",
+        "end_precision": "datetime",
+        "deadline_precision": "unknown",
+        "deadline_date_text": null,
+        "verified_at": null,
+        "review_status": "needs_review",
+        "registration_url": null,
+        "source_updated_at": null,
+        "content_revision": 1,
+        "change_pending": false,
+        "source_url": "https://utsc.utoronto.ca/aacc/careers-and-employment-tips",
+        "description": "A drop-in session on finding internships and summer employment.",
+        "time_commitment": "90 minutes",
+        "activity_type_ids": [
+          "workshop"
+        ],
+        "eligibility_note": "Drop-in. The organizer lists no registration requirement.",
+        "location": "Library Event Space (AC210), UTSC",
+        "start_at": "2026-12-03T22:00:00Z",
+        "end_at": "2026-12-03T23:30:00Z",
+        "start_date": "2026-12-03",
+        "end_date": "2026-12-03",
+        "start_date_text": "December 3, 2026 at 5:00 pm",
+        "end_date_text": "December 3, 2026 at 6:30 pm",
+        "classification_reasons": [
+          "Organizer describes career preparation and job search strategies."
+        ]
+      },
+      "observed_at": "2026-11-26T11:01:23Z",
+      "review_ref": null
+    },
+    {
+      "opportunity": {
+        "opportunity_id": "utsc-aacc-summer-full-time-job-fair-2027-01-20",
+        "title": "2027 Summer & Full-Time Job Fair",
+        "kind": "event",
+        "organizer_id": "utsc_aacc",
+        "source_post_id": null,
+        "source_post_ids": [],
+        "responsibilities": null,
+        "compensation_status": "not_stated",
+        "ccr_status": "not_stated",
+        "topic_ids": [
+          "other"
+        ],
+        "skill_ids": [],
+        "beginner_level": "unknown",
+        "format": "in_person",
+        "deadline_at": null,
+        "timezone": "America/Toronto",
+        "date_precision": "datetime",
+        "deadline_date": null,
+        "start_precision": "datetime",
+        "end_precision": "datetime",
+        "deadline_precision": "unknown",
+        "deadline_date_text": null,
+        "verified_at": null,
+        "review_status": "needs_review",
+        "registration_url": null,
+        "source_updated_at": null,
+        "content_revision": 1,
+        "change_pending": false,
+        "source_url": "https://www.utsc.utoronto.ca/aacc/career-fairs",
+        "description": "Meet employer representatives and explore summer and full-time roles.",
+        "time_commitment": "Four-hour event",
+        "activity_type_ids": [
+          "networking",
+          "recruitment"
+        ],
+        "eligibility_note": "U of T students and graduates from the past two years. Bring a valid TCard. No registration is listed.",
+        "location": "Highland Hall Event Centre, UTSC",
+        "start_at": "2027-01-20T16:00:00Z",
+        "end_at": "2027-01-20T20:00:00Z",
+        "start_date": "2027-01-20",
+        "end_date": "2027-01-20",
+        "start_date_text": "January 20, 2027 at 11:00 am",
+        "end_date_text": "January 20, 2027 at 3:00 pm",
+        "classification_reasons": [
+          "Official listing describes meeting employers for summer and full-time hiring."
+        ]
+      },
+      "observed_at": "2026-11-26T11:01:25Z",
+      "review_ref": null
+    }
+  ]
+}

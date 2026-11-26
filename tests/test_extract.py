@@ -16,6 +16,17 @@ def task(role_family='data_analyst', search_level='internship'):
     }
 
 
+@pytest.mark.parametrize("payload", [{"status": "ERROR"}, {"status": "OK"}, {"data": {}}])
+def test_malformed_success_response_does_not_become_an_empty_query(monkeypatch, payload):
+    response = requests.Response()
+    response.status_code = 200
+    monkeypatch.setattr(response, "json", lambda: payload)
+    monkeypatch.setattr(extract, "API_KEY", "fixture")
+    monkeypatch.setattr(extract.requests, "get", lambda *args, **kwargs: response)
+    with pytest.raises((TypeError, ValueError)):
+        extract.fetch_jobs_page(task(), 1)
+
+
 def test_timeout_retries_once_and_records_attempt_and_query_completion(tmp_path):
     history = CollectionHistory(tmp_path, monthly_budget=3, retry_reserve=1)
     calls = []

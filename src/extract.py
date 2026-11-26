@@ -76,13 +76,17 @@ def fetch_jobs_page(search_task: dict, page_number: int) -> list[dict]:
     )
     response.raise_for_status()
     response_data = response.json()
-    data = response_data.get('data', [])
+    if not isinstance(response_data, dict) or response_data.get('status', 'OK') != 'OK':
+        raise ValueError('JSearch did not return a successful response payload.')
+    data = response_data.get('data')
     if isinstance(data, list):
         jobs = data
     elif isinstance(data, dict):
-        jobs = data.get('jobs', [])
+        jobs = data.get('jobs')
     else:
         raise TypeError(f'Unexpected API type: {type(data)}')
+    if not isinstance(jobs, list) or any(not isinstance(job, dict) for job in jobs):
+        raise TypeError('JSearch did not return a job list.')
     return jobs
 
 
