@@ -10,6 +10,7 @@ from src.export_bundle import (
     BundleValidationError,
     _candidate_digest,
     _provenance,
+    _validate_provenance,
     _verify_checksums,
     _write_checksums,
     _write_package_files,
@@ -443,6 +444,35 @@ def test_publication_rechecks_exact_event_deadline(tmp_path):
     _write_package_files(package, base, _provenance(base, rows))
     with pytest.raises(BundleValidationError, match="expired_deadline"):
         validate_package(package, for_publication=True)
+
+
+def test_release_requires_individual_human_opportunity_approval():
+    bundle = read_json(FIXTURES / "valid_bundle.json")
+    bundle["manifest"]["schema_version"] = "2.0.0"
+    opportunity = bundle["opportunities"][0]
+    observed_at = "2026-10-26T16:00:00Z"
+    evidence = _provenance(bundle, [{
+        "opportunity_id": opportunity["opportunity_id"],
+        "eligibility": {
+            "decision": "auto_candidate",
+            "content_revision": opportunity["content_revision"],
+            "evaluated_at": observed_at,
+        },
+        "source_post_ids": [
+            {
+                "source_post_id": source_id,
+                "first_seen_at": observed_at,
+                "last_seen_at": observed_at,
+                "last_fetched_at": observed_at,
+            }
+            for source_id in opportunity["source_post_ids"]
+        ],
+    }])
+    _validate_provenance(bundle, evidence)
+    with pytest.raises(BundleValidationError, match="current human approval"):
+        _validate_provenance(bundle, evidence, for_publication=True)
+    evidence["datasets"]["opportunities"]["records"][0]["eligibility"]["decision"] = "human_approved"
+    _validate_provenance(bundle, evidence, for_publication=True)
 
 
 @pytest.fixture

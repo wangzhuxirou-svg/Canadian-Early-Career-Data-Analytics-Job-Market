@@ -5,9 +5,24 @@ import pytest
 import requests
 
 from config.settings import MAX_PAGES, SEARCH_QUERIES, START_PAGE
+from src import formal_collection
 from src.extract import collect_all_jobs
 from src.formal_collection import export_completed_round
 from src.history import CollectionHistory
+
+
+def test_missing_credential_fails_before_opening_collection_history(monkeypatch, capsys):
+    monkeypatch.setattr(formal_collection, "API_KEY", "")
+    monkeypatch.setattr(
+        "sys.argv", ["formal_collection", "--collect", "--usage-ref", "fixture"],
+    )
+    monkeypatch.setattr(
+        formal_collection, "CollectionHistory", lambda: pytest.fail("collection history was opened"),
+    )
+    with pytest.raises(SystemExit) as rejected:
+        formal_collection.main()
+    assert rejected.value.code == 2
+    assert "requires JSEARCH_API_KEY" in capsys.readouterr().err
 
 
 def test_formal_collection_exports_coverage_and_deduplicated_sample(tmp_path):

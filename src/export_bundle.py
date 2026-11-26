@@ -8,7 +8,7 @@ import re
 import shutil
 import sys
 import tempfile
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -25,6 +25,7 @@ DATA_DIR = ROOT / "data" / "opportunities"
 LOGGER = logging.getLogger("src.export_bundle")
 VERSION_PATTERN = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 PRODUCTION_SCHEMA = "2.0.0"
+ONGOING_REVIEW_AGE = timedelta(days=30)
 RELEASE_EVIDENCE = "release_evidence.json"
 RELEASE_ATTESTATION = "release_attestation.json"
 BUNDLE_SIDECARS = {
@@ -324,7 +325,7 @@ def _candidate_digest(checksums: dict[str, str]) -> str:
 def _public_source_url(value: str) -> bool:
     try:
         url = urlsplit(value)
-        host = url.hostname
+        host = url.hostname.removesuffix(".") if url.hostname else None
         if host and re.fullmatch(r"[.0-9]+|[0-9a-f:]+", host):
             return False  # Release evidence uses named source operators, never IP literals.
     except ValueError:
@@ -423,16 +424,17 @@ def _validate_release_evidence(
     for dataset, field in (
         ("market_jobs", "source_url"), ("courses", "official_url"),
         ("resources", "source_url"), ("organizers", "profile_url"), ("opportunities", "source_url"),
+        ("opportunities", "registration_url"),
     ):
         if any(
             not _public_source_url(row[field] or "")
             for row in bundle[dataset]
-            if dataset != "market_jobs" or row[field] is not None
+            if field not in {"registration_url", "source_url"} or row[field] is not None
         ):
             raise BundleValidationError(f"Publication requires real HTTPS source URLs for {dataset}.")
 
 
-def _validate_provenance(bundle: dict, provenance: dict) -> None:
+def _validate_provenance(bundle: dict, provenance: dict, *, for_publication: bool = False) -> None:
     if not isinstance(provenance, dict):
         raise BundleValidationError("Dataset provenance must be an object.")
     if provenance.get("generated_at") != bundle["manifest"]["generated_at"]:
@@ -476,6 +478,8 @@ def _validate_provenance(bundle: dict, provenance: dict) -> None:
             "auto_candidate", "human_approved"
         }:
             raise BundleValidationError("Opportunity provenance must identify automatic or human eligibility.")
+        if for_publication and production and eligibility["decision"] != "human_approved":
+            raise BundleValidationError("Each production opportunity requires current human approval.")
         opportunity = next(item for item in bundle["opportunities"]
                            if item["opportunity_id"] == row["opportunity_id"])
         source_type = row.get("source", "instagram")
@@ -594,15 +598,29 @@ def validate_package(
     _validate_statistics(
         _read_json(package_dir / "reference_statistics.json"), bundle["market_jobs"], contracts_dir
     )
-    _validate_provenance(bundle, _read_json(package_dir / "dataset_provenance.json"))
+    _validate_provenance(
+        bundle, _read_json(package_dir / "dataset_provenance.json"), for_publication=for_publication,
+    )
     if for_publication:
         from src.opportunities.temporal import expiration_reason
+        now = datetime.now(timezone.utc)
         for opportunity in bundle["opportunities"]:
-            expired = expiration_reason(opportunity)
+            expired = expiration_reason(opportunity, now)
             if expired:
                 raise BundleValidationError(
                     f"Opportunity {opportunity['opportunity_id']} contains an expired date: {expired}."
                 )
+            if production:
+                verified = _parse_timestamp(opportunity["verified_at"], "opportunity.verified_at")
+                updated_at = opportunity["source_updated_at"]
+                if (
+                    verified > now
+                    or (updated_at and _parse_timestamp(updated_at, "opportunity.source_updated_at") > verified)
+                    or (opportunity["kind"] == "ongoing_opportunity" and now - verified > ONGOING_REVIEW_AGE)
+                ):
+                    raise BundleValidationError(
+                        f"Opportunity {opportunity['opportunity_id']} does not have a current verification."
+                    )
         if not production:
             raise BundleValidationError("Publication requires the formal schema version 2.0.0.")
     if production and (for_publication or attestation.exists()):

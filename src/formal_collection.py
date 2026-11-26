@@ -10,7 +10,7 @@ import pandas as pd
 
 from config.settings import MAX_PAGES, REQUEST_DELAY_SECONDS, SEARCH_QUERIES, START_PAGE
 from src.clean import clean_jobs
-from src.extract import CollectionRunIncomplete, collect_all_jobs
+from src.extract import API_KEY, CollectionRunIncomplete, collect_all_jobs
 from src.feature_engineering import engineer_features
 from src.history import CollectionHistory
 from src.market_export import export_market_bundle
@@ -113,6 +113,8 @@ def main() -> int:
     args = parser.parse_args()
     if not args.usage_ref.strip():
         parser.error("--usage-ref must identify the approved source-usage record.")
+    if args.collect and (not API_KEY or not API_KEY.strip()):
+        parser.error("--collect requires JSEARCH_API_KEY from the approved account's secret store.")
     history = CollectionHistory()
     try:
         if args.collect:

@@ -31,8 +31,12 @@ python -m src.formal_collection --collect --run-id "<run-id>" --usage-ref "<sour
 python -m src.formal_collection --from-completed-run --run-id "<run-id>" --usage-ref "<source-usage-record>"
 ```
 
-The command saves raw pages and attempt details only in ignored
-`data/history/`. Malformed/error response payloads do not count as empty
+Use a clean checkout on controlled storage. The command saves raw pages
+and attempt details only in ignored `data/history/`. Root `data/raw/` also
+ignores new files from the older pipeline. Seven historical inputs were
+already tracked upstream for offline replay, including full descriptions.
+Release packages and website artifacts use the description-free bundle.
+Malformed/error response payloads do not count as empty
 successes. The release input under `data/history/formal-runs/<run-id>/`
 appears after the entire matrix completes. `market-coverage.json` records
 query status, attempts, response rows and deduplicated counts.
@@ -124,6 +128,11 @@ expired opportunities are omitted. Partial snapshots with usable caption/OCR
 evidence are allowed under D6 rules. Missing or disabled organizers are omitted;
 missing organizer verification is retained as a warning for internal integration
 and still blocks formal publication.
+
+Formal publication additionally requires individual current human approval for
+each included opportunity, including Instagram. A newer source revision or a
+verification in the future blocks publication. Ongoing records must have been
+verified within 30 days. Registration URLs, when provided, require public HTTPS.
 
 For compatibility with the shared v1 bundle, exported `review_status: approved`
 means **accepted for the package**, not necessarily reviewed by a human. The
