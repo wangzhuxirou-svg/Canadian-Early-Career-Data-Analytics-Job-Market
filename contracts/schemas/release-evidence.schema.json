@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://utsc.example/contracts/release/release-evidence.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["data_mode", "market", "sources"],
+  "properties": {
+    "data_mode": { "enum": ["real", "synthetic"] },
+    "market": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run_id", "query_config_version", "collected_from", "collected_to", "usage_ref", "raw_rows", "unique_source_jobs", "queries"],
+      "properties": {
+        "run_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" },
+        "query_config_version": { "type": "string", "minLength": 1 },
+        "collected_from": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/nullableUtcDateTime" },
+        "collected_to": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/nullableUtcDateTime" },
+        "usage_ref": { "$ref": "#/$defs/usageRef" },
+        "raw_rows": { "type": "integer", "minimum": 0 },
+        "unique_source_jobs": { "type": "integer", "minimum": 0 },
+        "queries": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/query" }
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/source" }
+    }
+  },
+  "$defs": {
+    "status": { "enum": ["not_checked", "collection_failed", "checked_no_valid_results", "verified_publishable"] },
+    "usageRef": { "type": ["string", "null"], "pattern": "\\S" },
+    "query": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role_id", "career_level", "status", "attempts", "result_count"],
+      "properties": {
+        "role_id": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/roleId" },
+        "career_level": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/careerLevel" },
+        "status": { "$ref": "#/$defs/status" },
+        "attempts": { "type": "integer", "minimum": 0 },
+        "result_count": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "dataset", "source_url", "status", "checked_at", "record_ids", "usage_ref"],
+      "properties": {
+        "source_id": { "type": "string", "minLength": 1 },
+        "dataset": { "enum": ["courses", "resources", "organizers", "opportunities"] },
+        "source_url": { "type": "string", "format": "uri", "pattern": "^https://" },
+        "status": { "$ref": "#/$defs/status" },
+        "checked_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/nullableUtcDateTime" },
+        "record_ids": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "usage_ref": { "$ref": "#/$defs/usageRef" }
+      }
+    }
+  }
+}

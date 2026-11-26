@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://utsc.example/contracts/release/release-attestation.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["dataset_version", "candidate_sha256", "reviewer", "confirmed_at", "approval_ref", "confirmations"],
+  "properties": {
+    "dataset_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "candidate_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "reviewer": { "type": "string", "pattern": "\\S" },
+    "confirmed_at": { "$ref": "https://utsc.example/contracts/v1/common.schema.json#/$defs/utcDateTime" },
+    "approval_ref": { "type": "string", "pattern": "\\S" },
+    "confirmations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role_classifications", "course_evidence", "opportunity_dates", "sources_and_usage"],
+      "properties": {
+        "role_classifications": { "const": true },
+        "course_evidence": { "const": true },
+        "opportunity_dates": { "const": true },
+        "sources_and_usage": { "const": true }
+      }
+    }
+  }
+}
